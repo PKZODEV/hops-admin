@@ -292,7 +292,7 @@ export default function DashboardPage() {
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
                                 <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
-                                <Tooltip formatter={(v: number) => [`฿${v.toLocaleString()}`, 'รายได้']} contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '12px' }} />
+                                <Tooltip formatter={(v) => [`฿${Number(v).toLocaleString()}`, 'รายได้']} contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '12px' }} />
                                 <Area type="monotone" dataKey="value" stroke="#2FA6A8" strokeWidth={2} fill="url(#revGrad)" />
                             </AreaChart>
                         </ResponsiveContainer>
