@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f1f5f9;
+  /* Light blue-grey wash for main app */
+  --foreground: #171717;
+  --primary-teal: #2FA6A8;
+  --secondary-orange: #F59E0B;
+  --text-muted: #6b7280;
+  --border-light: #e5e7eb;
+}
+
+@theme inline {
+  --color-background: #f1f5f9;
+  --color-foreground: #171717;
+  --color-primary-teal: #2FA6A8;
+  --color-secondary-orange: #F59E0B;
+  --color-muted: #6b7280;
+  --color-border-light: #e5e7eb;
+  --font-sans: "Inter", "Prompt", sans-serif;
+}
+
+/* Remove dark mode default for this specific design */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #f1f5f9;
+    --foreground: #171717;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+/* Utilities for hiding scrollbar but allowing scroll */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
