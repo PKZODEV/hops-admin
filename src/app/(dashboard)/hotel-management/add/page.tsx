@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Plus, X, Upload } from 'lucide-react';
 import { ImageUploader } from '@/components/ui/ImageUploader';
@@ -14,6 +14,7 @@ const AMENITY_OPTIONS = [
 ];
 
 interface BuildingInput { name: string; floors: string }
+interface PropertyCategory { id: string; name: string }
 
 export default function AddHotelPage() {
     const router = useRouter();
@@ -30,6 +31,15 @@ export default function AddHotelPage() {
     const [buildings, setBuildings] = useState<BuildingInput[]>([{ name: 'Main Building', floors: '1' }]);
     const [roomTypes, setRoomTypes] = useState<string[]>([]);
     const [newRoomType, setNewRoomType] = useState('');
+    const [propertyCategoryId, setPropertyCategoryId] = useState('');
+    const [categories, setCategories] = useState<PropertyCategory[]>([]);
+
+    useEffect(() => {
+        fetch(`${API}/property-categories`)
+            .then(r => r.json())
+            .then((data: PropertyCategory[]) => Array.isArray(data) && setCategories(data))
+            .catch(() => {});
+    }, []);
 
     const toggleAmenity = (a: string) =>
         setSelectedAmenities(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a]);
@@ -44,7 +54,7 @@ export default function AddHotelPage() {
     };
 
     const handleSubmit = async () => {
-        if (!name.trim()) { setError('กรุณากรอกชื่อโรงแรม'); return; }
+        if (!name.trim()) { setError('กรุณากรอกชื่อโรงแรม/พูลวิลล่าห์/โฮมสเตย์'); return; }
         setLoading(true);
         setError(null);
         try {
@@ -53,9 +63,15 @@ export default function AddHotelPage() {
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: name.trim(), type: 'HOTEL', amenities: selectedAmenities, images, ...(location ? { location } : {}), ...(address ? { address } : {}), ...(description ? { description } : {}) }),
+                body: JSON.stringify({
+                    name: name.trim(), type: 'HOTEL', amenities: selectedAmenities, images,
+                    ...(location ? { location } : {}),
+                    ...(address ? { address } : {}),
+                    ...(description ? { description } : {}),
+                    ...(propertyCategoryId ? { propertyCategoryId } : {}),
+                }),
             });
-            if (!propRes.ok) { const d = await propRes.json(); throw new Error(d.message ?? 'ไม่สามารถสร้างโรงแรมได้'); }
+            if (!propRes.ok) { const d = await propRes.json(); throw new Error(d.message ?? 'ไม่สามารถสร้างที่พักได้'); }
             const prop = await propRes.json() as { id: string };
 
             // Create buildings
@@ -97,8 +113,8 @@ export default function AddHotelPage() {
                     <ArrowLeft className="w-5 h-5" />
                 </button>
                 <div>
-                    <h1 className="text-xl font-bold text-gray-900">เพิ่มโรงแรมใหม่</h1>
-                    <p className="text-sm text-gray-500 mt-0.5">กรอกรายละเอียดเพื่อเพิ่มโรงแรม</p>
+                    <h1 className="text-xl font-bold text-gray-900">เพิ่มโรงแรม/พูลวิลล่าห์/โฮมสเตย์ใหม่</h1>
+                    <p className="text-sm text-gray-500 mt-0.5">กรอกรายละเอียดเพื่อเพิ่มโรงแรม/พูลวิลล่าห์/โฮมสเตย์</p>
                 </div>
             </div>
 
@@ -112,13 +128,26 @@ export default function AddHotelPage() {
                     <h2 className="text-base font-bold text-gray-900 mb-4">ข้อมูลพื้นฐาน</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">ชื่อโรงแรม <span className="text-red-500">*</span></label>
-                            <input className={inputCls} placeholder="กรอกชื่อโรงแรม" value={name} onChange={e => setName(e.target.value)} />
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">ชื่อโรงแรม/พูลวิลล่าห์/โฮมสเตย์ <span className="text-red-500">*</span></label>
+                            <input className={inputCls} placeholder="กรอกชื่อโรงแรม/พูลวิลล่าห์/โฮมสเตย์" value={name} onChange={e => setName(e.target.value)} />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1.5">สถานที่</label>
                             <input className={inputCls} placeholder="เมือง, จังหวัด" value={location} onChange={e => setLocation(e.target.value)} />
                         </div>
+                    </div>
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">ประเภทที่พัก</label>
+                        <select
+                            className={inputCls}
+                            value={propertyCategoryId}
+                            onChange={e => setPropertyCategoryId(e.target.value)}
+                        >
+                            <option value="">เลือกประเภทที่พัก</option>
+                            {categories.map(c => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                        </select>
                     </div>
                     <div className="mb-4">
                         <label className="block text-sm font-medium text-gray-700 mb-1.5">ที่อยู่</label>
@@ -128,7 +157,7 @@ export default function AddHotelPage() {
                         <label className="block text-sm font-medium text-gray-700 mb-1.5">คำอธิบาย</label>
                         <textarea
                             className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:ring-primary-teal focus:border-primary-teal min-h-[100px] resize-none"
-                            placeholder="อธิบายเกี่ยวกับโรงแรม"
+                            placeholder="อธิบายเกี่ยวกับที่พัก"
                             value={description}
                             onChange={e => setDescription(e.target.value)}
                         />
@@ -137,7 +166,7 @@ export default function AddHotelPage() {
 
                 {/* Hotel Images */}
                 <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-                    <h2 className="text-base font-bold text-gray-900 mb-1">รูปภาพโรงแรม</h2>
+                    <h2 className="text-base font-bold text-gray-900 mb-1">รูปภาพที่พัก</h2>
                     <p className="text-sm text-gray-500 mb-4">PNG, JPG สูงสุด 5MB (รับหลายไฟล์)</p>
                     <ImageUploader value={images} onChange={setImages} maxImages={10} />
                 </div>
@@ -145,9 +174,9 @@ export default function AddHotelPage() {
                 {/* Building Structure */}
                 <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
                     <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-base font-bold text-gray-900">โครงสร้างอาคาร</h2>
+                        <h2 className="text-base font-bold text-gray-900">โครงสร้างอาคาร/หลัง</h2>
                         <button onClick={addBuilding} className="flex items-center gap-1.5 text-sm text-primary-teal font-medium hover:text-teal-700 transition-colors">
-                            <Plus className="w-4 h-4" /> เพิ่มอาคาร
+                            <Plus className="w-4 h-4" /> เพิ่มอาคาร/หลัง
                         </button>
                     </div>
                     <div className="space-y-3">
@@ -155,7 +184,7 @@ export default function AddHotelPage() {
                             <div key={i} className="flex gap-3 items-center">
                                 <input
                                     className={inputCls + ' flex-1'}
-                                    placeholder="ชื่ออาคาร"
+                                    placeholder="ชื่ออาคาร/หลัง"
                                     value={b.name}
                                     onChange={e => updateBuilding(i, 'name', e.target.value)}
                                 />
@@ -239,9 +268,10 @@ export default function AddHotelPage() {
                     disabled={loading}
                     className="flex-1 sm:flex-none sm:px-12 h-11 bg-primary-teal text-white rounded-lg text-sm font-medium hover:bg-teal-600 transition-colors disabled:opacity-60 shadow-sm"
                 >
-                    {loading ? 'กำลังสร้าง...' : 'สร้างโรงแรม'}
+                    {loading ? 'กำลังสร้าง...' : 'สร้างที่พัก'}
                 </button>
             </div>
         </div>
     );
 }
+

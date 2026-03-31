@@ -6,7 +6,6 @@ import { ImageUploader } from '@/components/ui/ImageUploader';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
 
-const PROPERTY_TYPES = ['HOTEL', 'RESORT', 'GUESTHOUSE', 'VILLA', 'HOSTEL', 'APARTMENT', 'MOTEL', 'OTHER'];
 const AMENITY_OPTIONS = [
     'Wi-Fi ฟรี', 'อาหารเช้า', 'ร้านอาหาร', 'ฟิตแนส', 'ที่จอดรถ', 'สระว่ายน้ำ',
     'สปา', 'บริการห้อง', 'ซักรีด', 'บริการต้อนรับ 24 ชม.', 'ห้องประชุม', 'รับส่งสนามบิน',
@@ -14,6 +13,7 @@ const AMENITY_OPTIONS = [
 
 interface BuildingRow { id?: string; name: string; floorCount: number; originalFloorCount: number; }
 interface RawBuilding { id: string; name: string; floors: unknown[]; }
+interface PropertyCategory { id: string; name: string }
 
 export default function HotelEditPage() {
     const router = useRouter();
@@ -24,7 +24,6 @@ export default function HotelEditPage() {
     const [error, setError] = useState('');
 
     const [name, setName] = useState('');
-    const [type, setType] = useState('HOTEL');
     const [description, setDescription] = useState('');
     const [address, setAddress] = useState('');
     const [city, setCity] = useState('');
@@ -32,9 +31,18 @@ export default function HotelEditPage() {
     const [isActive, setIsActive] = useState(true);
     const [images, setImages] = useState<string[]>([]);
     const [amenities, setAmenities] = useState<string[]>([]);
+    const [propertyCategoryId, setPropertyCategoryId] = useState('');
+    const [categories, setCategories] = useState<PropertyCategory[]>([]);
 
     const [buildings, setBuildings] = useState<BuildingRow[]>([]);
     const [removedBuildingIds, setRemovedBuildingIds] = useState<string[]>([]);
+
+    useEffect(() => {
+        fetch(`${API}/property-categories`)
+            .then(r => r.json())
+            .then((data: PropertyCategory[]) => Array.isArray(data) && setCategories(data))
+            .catch(() => {});
+    }, []);
 
     useEffect(() => {
         const load = async () => {
@@ -46,7 +54,6 @@ export default function HotelEditPage() {
                 if (!propRes.ok) throw new Error('โหลดข้อมูลไม่สำเร็จ');
                 const data = await propRes.json();
                 setName(data.name ?? '');
-                setType(data.type ?? 'HOTEL');
                 setDescription(data.description ?? '');
                 setAddress(data.address ?? '');
                 setCity(data.city ?? '');
@@ -54,6 +61,7 @@ export default function HotelEditPage() {
                 setIsActive(data.isActive ?? true);
                 setImages(data.images ?? []);
                 setAmenities(data.amenities ?? []);
+                setPropertyCategoryId(data.propertyCategoryId ?? '');
                 if (bRes.ok) {
                     const bData = await bRes.json();
                     setBuildings(Array.isArray(bData) ? bData.map((b: RawBuilding) => ({
@@ -98,7 +106,7 @@ export default function HotelEditPage() {
                 method: 'PATCH',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, type, description, address, city, country, amenities, images, isActive }),
+                body: JSON.stringify({ name, description, address, city, country, amenities, images, isActive, ...(propertyCategoryId ? { propertyCategoryId } : { propertyCategoryId: null }) }),
             });
             if (!res.ok) {
                 const data = await res.json().catch(() => ({}));
@@ -172,8 +180,8 @@ export default function HotelEditPage() {
                     <ArrowLeft className="w-5 h-5" />
                 </button>
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">แก้ไขโรงแรม</h1>
-                    <p className="text-sm text-gray-500 mt-0.5">อัปเดตข้อมูลโรงแรม</p>
+                    <h1 className="text-2xl font-bold text-gray-900">แก้ไขโรงแรม/พูลวิลล่าห์/โฮมสเตย์</h1>
+                    <p className="text-sm text-gray-500 mt-0.5">อัปเดตข้อมูลที่พัก</p>
                 </div>
             </div>
 
@@ -183,22 +191,23 @@ export default function HotelEditPage() {
                     <h2 className="text-sm font-bold text-gray-900 mb-4">ข้อมูลพื้นฐาน</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="md:col-span-2">
-                            <label className="block text-xs font-medium text-gray-700 mb-1.5">ชื่อโรงแรม <span className="text-red-500">*</span></label>
+                            <label className="block text-xs font-medium text-gray-700 mb-1.5">ชื่อโรงแรม/พูลวิลล่าห์/โฮมสเตย์ <span className="text-red-500">*</span></label>
                             <input
                                 value={name}
                                 onChange={e => setName(e.target.value)}
                                 className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-teal/30 focus:border-primary-teal transition"
-                                placeholder="ชื่อโรงแรม"
+                                placeholder="ชื่อโรงแรม/พูลวิลล่าห์/โฮมสเตย์"
                             />
                         </div>
                         <div>
                             <label className="block text-xs font-medium text-gray-700 mb-1.5">ประเภทที่พัก</label>
                             <select
-                                value={type}
-                                onChange={e => setType(e.target.value)}
+                                value={propertyCategoryId}
+                                onChange={e => setPropertyCategoryId(e.target.value)}
                                 className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-teal/30 focus:border-primary-teal transition bg-white"
                             >
-                                {PROPERTY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                                <option value="">เลือกประเภทที่พัก</option>
+                                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
                         </div>
                         <div>
@@ -251,7 +260,7 @@ export default function HotelEditPage() {
 
                 {/* Images */}
                 <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-                    <h2 className="text-sm font-bold text-gray-900 mb-1">รูปภาพโรงแรม</h2>
+                    <h2 className="text-sm font-bold text-gray-900 mb-1">รูปภาพที่พัก</h2>
                     <p className="text-xs text-gray-400 mb-4">PNG, JPG สูงสุด 5MB</p>
                     <ImageUploader value={images} onChange={setImages} maxImages={10} />
                 </div>
@@ -260,16 +269,16 @@ export default function HotelEditPage() {
                 <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
                     <div className="flex items-center justify-between mb-4">
                         <div>
-                            <h2 className="text-sm font-bold text-gray-900">โครงสร้างอาคาร</h2>
-                            <p className="text-xs text-gray-400 mt-0.5">อาคาร / ชั้น ที่ใช้จัดห้องพัก — เก็บในตาราง Building & Floor เดียวกับขั้นตอนตั้งค่า</p>
+                            <h2 className="text-sm font-bold text-gray-900">โครงสร้างอาคาร/หลัง</h2>
+                            <p className="text-xs text-gray-400 mt-0.5">อาคาร/หลัง / ชั้น ที่ใช้จัดห้องพัก — เก็บในตาราง Building & Floor เดียวกับขั้นตอนตั้งค่า</p>
                         </div>
                         <button type="button" onClick={addBuilding}
                             className="flex items-center gap-1.5 text-xs font-medium text-primary-teal hover:text-teal-700 px-3 py-1.5 border border-primary-teal rounded-lg hover:bg-teal-50 transition-colors">
-                            <Plus className="w-3.5 h-3.5" /> เพิ่มอาคาร
+                            <Plus className="w-3.5 h-3.5" /> เพิ่มอาคาร/หลัง
                         </button>
                     </div>
                     {buildings.length === 0 ? (
-                        <p className="text-sm text-gray-400 text-center py-6">ยังไม่มีอาคาร — กด &quot;เพิ่มอาคาร&quot; เพื่อเริ่มต้น</p>
+                        <p className="text-sm text-gray-400 text-center py-6">ยังไม่มีอาคาร/หลัง — กด &quot;เพิ่มอาคาร/หลัง&quot; เพื่อเริ่มต้น</p>
                     ) : (
                         <div className="space-y-3">
                             {buildings.map((b, i) => (
@@ -279,7 +288,7 @@ export default function HotelEditPage() {
                                     )}
                                     <input
                                         className="flex-1 h-10 px-3.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:ring-primary-teal focus:border-primary-teal"
-                                        placeholder="ชื่ออาคาร เช่น Main Building, อาคาร A"
+                                        placeholder="ชื่ออาคาร/หลัง เช่น Main Building, อาคาร A"
                                         value={b.name}
                                         onChange={e => updateBuilding(i, 'name', e.target.value)}
                                     />

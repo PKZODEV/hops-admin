@@ -19,6 +19,8 @@ interface CreatedBuilding { id: string; name: string; floors: CreatedFloor[] }
 interface CreatedRoomType { id: string; name: string }
 interface CreatedRoomUnit { id: string; number: string; floorId: string; roomTypeId: string }
 
+interface PropertyCategory { id: string; name: string }
+
 const ROOM_TYPE_PRESETS = ['Standard', 'Superior', 'Deluxe', 'Junior Suite', 'Suite', 'Family Room', 'Twin Room', 'Double Room'];
 
 const ROOM_UNIT_AMENITIES = [
@@ -54,6 +56,8 @@ export default function WizardPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [hotelName, setHotelName] = useState('');
+  const [propertyCategoryId, setPropertyCategoryId] = useState('');
+  const [categories, setCategories] = useState<PropertyCategory[]>([]);
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
   const [customAmenity, setCustomAmenity] = useState('');
   const [hotelImages, setHotelImages] = useState<string[]>([]);
@@ -74,6 +78,15 @@ export default function WizardPage() {
   const [createdBuildings, setCreatedBuildings] = useState<CreatedBuilding[]>([]);
   const [createdRoomTypes, setCreatedRoomTypes] = useState<CreatedRoomType[]>([]);
   const [createdRoomUnits, setCreatedRoomUnits] = useState<CreatedRoomUnit[]>([]);
+
+  // On mount: load existing data and resume at first incomplete step
+  React.useEffect(() => {
+    const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
+    fetch(`${BASE}/property-categories`)
+      .then(r => r.json())
+      .then((data: PropertyCategory[]) => Array.isArray(data) && setCategories(data))
+      .catch(() => {});
+  }, []);
 
   // On mount: load existing data and resume at first incomplete step
   React.useEffect(() => {
@@ -168,6 +181,7 @@ export default function WizardPage() {
           const extra = customAmenity.split(',').map((s: string) => s.trim()).filter(Boolean);
           const property = await api.post<{ id: string }>('/properties', {
             name: hotelName.trim(), type: 'HOTEL', amenities: [...selectedAmenities, ...extra], images: hotelImages,
+            ...(propertyCategoryId ? { propertyCategoryId } : {}),
           });
           setPropertyId(property.id);
           if (typeof window !== 'undefined') localStorage.setItem('hops_property_id', property.id);
@@ -300,13 +314,24 @@ export default function WizardPage() {
         {currentStep === 0 && (
           <div className="space-y-8 pb-20">
             <Card padding="lg">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">ชื่อโรงแรม <span className="text-red-500">*</span></h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-4">ชื่อโรงแรม/พูลวิลล่าห์/โฮมสเตย์ <span className="text-red-500">*</span></h3>
               <Input placeholder="เช่น โรงแรมริเวอร์วิว แกรนด์" className="max-w-xl" value={hotelName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setHotelName(e.target.value)} />
               <p className="text-xs text-gray-400 mt-2">ชื่อนี้จะแสดงในเอกสารและหน้าจอทั้งหมด</p>
             </Card>
             <Card padding="lg">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">ประเภทที่พัก</h3>
+              <select
+                className={selectCls + ' max-w-xl'}
+                value={propertyCategoryId}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setPropertyCategoryId(e.target.value)}
+              >
+                <option value="">เลือกประเภทที่พัก</option>
+                {categories.map((c: PropertyCategory) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </Card>
+            <Card padding="lg">
               <h3 className="text-lg font-bold text-gray-900 mb-1">สิ่งอำนวยความสะดวก</h3>
-              <p className="text-sm text-gray-500 mb-6">เลือกสิ่งอำนวยความสะดวกที่โรงแรมของคุณมี</p>
+              <p className="text-sm text-gray-500 mb-6">เลือกสิ่งอำนวยความสะดวกที่ที่พักของคุณมี</p>
               <AmenitiesSelector selected={selectedAmenities} onChange={setSelectedAmenities} />
               <div className="mt-6">
                 <h4 className="text-sm font-bold text-gray-900 mb-2">เพิ่มสิ่งอำนวยความสะดวกอื่นๆ</h4>
@@ -314,8 +339,8 @@ export default function WizardPage() {
               </div>
             </Card>
             <Card padding="lg">
-              <h3 className="text-lg font-bold text-gray-900 mb-1">รูปภาพโรงแรม</h3>
-              <p className="text-sm text-gray-500 mb-4">เพิ่มรูปภาพแสดงบรรยากาศโรงแรม เช่น ล็อบบี้ สระว่ายน้ำ หรือพื้นที่ส่วนกลาง (ไม่บังคับ)</p>
+              <h3 className="text-lg font-bold text-gray-900 mb-1">รูปภาพที่พัก</h3>
+              <p className="text-sm text-gray-500 mb-4">เพิ่มรูปภาพแสดงบรรยากาศที่พัก เช่น ล็อบบี้ สระว่ายน้ำ หรือพื้นที่ส่วนกลาง (ไม่บังคับ)</p>
               <ImageUploader value={hotelImages} onChange={setHotelImages} maxImages={5} />
             </Card>
           </div>
@@ -325,16 +350,16 @@ export default function WizardPage() {
           <div className="space-y-6 pb-20">
             <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex gap-3 text-sm text-blue-800">
               <Lightbulb className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
-              <p><span className="font-bold mr-1">เคล็ดลับ:</span>หากโรงแรมของคุณมีเพียง 1 อาคาร คุณสามารถตั้งชื่อว่า &quot;อาคารหลัก&quot;</p>
+              <p><span className="font-bold mr-1">เคล็ดลับ:</span>หากที่พักของคุณมีเพียง 1 อาคาร/หลัง คุณสามารถตั้งชื่อว่า &quot;อาคารหลัก&quot;</p>
             </div>
             {buildingForms.map((building: BuildingForm, bi: number) => (
               <Card key={bi} padding="lg" className="flex gap-6">
                 <div className="w-12 h-12 bg-[#e0f2fe] text-[#0284c7] rounded-xl flex items-center justify-center shrink-0"><Building2 className="w-6 h-6" /></div>
                 <div className="flex-1 space-y-4">
                   <div className="flex items-center justify-between">
-                    <label className="text-sm font-bold text-gray-900">อาคาร {bi + 1} <span className="text-red-500">*</span></label>
+                    <label className="text-sm font-bold text-gray-900">อาคาร/หลัง {bi + 1} <span className="text-red-500">*</span></label>
                     {buildingForms.length > 1 && (
-                      <button onClick={() => removeBuilding(bi)} className="text-red-500 hover:text-red-700 text-sm font-medium flex items-center gap-1"><X className="w-4 h-4" /> ลบอาคาร</button>
+                      <button onClick={() => removeBuilding(bi)} className="text-red-500 hover:text-red-700 text-sm font-medium flex items-center gap-1"><X className="w-4 h-4" /> ลบอาคาร/หลัง</button>
                     )}
                   </div>
                   <Input value={building.name} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateBuildingName(bi, e.target.value)} placeholder="เช่น Building A, อาคารหลัก" />
@@ -357,7 +382,7 @@ export default function WizardPage() {
               </Card>
             ))}
             <button onClick={addBuilding} className="w-full border-2 border-dashed border-primary-teal text-primary-teal rounded-xl p-4 flex items-center justify-center gap-2 hover:bg-teal-50 transition-colors bg-transparent font-medium">
-              <Plus className="w-5 h-5" /> เพิ่มอาคาร
+              <Plus className="w-5 h-5" /> เพิ่มอาคาร/หลัง
             </button>
           </div>
         )}

@@ -16,6 +16,7 @@ interface HotelRow {
     available: number;
     booked: number;
     rating: number;
+    categoryName: string;
 }
 
 const STATUS_STYLES: Record<HotelStatus, string> = {
@@ -46,7 +47,7 @@ export default function HotelManagementPage() {
                 if (!Array.isArray(props) || props.length === 0) { setLoading(false); return; }
 
                 const rows: HotelRow[] = await Promise.all(
-                    props.map(async (p: { id: string; name: string; location?: string }) => {
+                    props.map(async (p: { id: string; name: string; location?: string; propertyCategory?: { name: string } | null }) => {
                         try {
                             const statsRes = await fetch(`${API}/properties/${p.id}/stats`, { credentials: 'include' });
                             const stats = statsRes.ok ? await statsRes.json() : null;
@@ -59,9 +60,10 @@ export default function HotelManagementPage() {
                                 available: stats?.rooms?.available ?? 0,
                                 booked: stats?.rooms?.occupied ?? 0,
                                 rating: 4.8,
+                                categoryName: p.propertyCategory?.name ?? '—',
                             };
                         } catch {
-                            return { id: p.id, name: p.name, location: 'ไม่ระบุ', status: 'Active' as HotelStatus, totalRooms: 0, available: 0, booked: 0, rating: 0 };
+                            return { id: p.id, name: p.name, location: 'ไม่ระบุ', status: 'Active' as HotelStatus, totalRooms: 0, available: 0, booked: 0, rating: 0, categoryName: '—' };
                         }
                     })
                 );
@@ -132,7 +134,7 @@ export default function HotelManagementPage() {
                     <table className="w-full text-sm text-left min-w-[800px]">
                         <thead className="bg-gray-50 border-y border-gray-100">
                             <tr>
-                                {['ชื่อโรงแรม', 'สถานที่', 'สถานะ', 'ห้องทั้งหมด', 'ว่าง', 'จอง', 'คะแนน', 'จัดการ'].map(h => (
+                                {['ชื่อโรงแรม', 'ประเภทที่พัก', 'สถานที่', 'สถานะ', 'ห้องทั้งหมด', 'ว่าง', 'จอง', 'คะแนน', 'จัดการ'].map(h => (
                                     <th key={h} className="px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
                                 ))}
                             </tr>
@@ -140,15 +142,16 @@ export default function HotelManagementPage() {
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan={8} className="px-5 py-16 text-center text-sm text-gray-400">กำลังโหลด...</td>
+                                    <td colSpan={9} className="px-5 py-16 text-center text-sm text-gray-400">กำลังโหลด...</td>
                                 </tr>
                             ) : filtered.length === 0 ? (
                                 <tr>
-                                    <td colSpan={8} className="px-5 py-16 text-center text-sm text-gray-400">ไม่พบโรงแรม</td>
+                                    <td colSpan={9} className="px-5 py-16 text-center text-sm text-gray-400">ไม่พบโรงแรม</td>
                                 </tr>
                             ) : filtered.map(hotel => (
                                 <tr key={hotel.id} className="border-t border-gray-50 hover:bg-gray-50/50 transition-colors">
                                     <td className="px-5 py-4 font-medium text-gray-900">{hotel.name}</td>
+                                    <td className="px-5 py-4 text-gray-500">{hotel.categoryName}</td>
                                     <td className="px-5 py-4 text-gray-500">
                                         <span className="flex items-center gap-1.5">
                                             <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />
