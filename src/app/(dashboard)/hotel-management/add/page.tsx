@@ -54,7 +54,7 @@ export default function AddHotelPage() {
     };
 
     const handleSubmit = async () => {
-        if (!name.trim()) { setError('กรุณากรอกชื่อโรงแรม/พูลวิลล่าห์/โฮมสเตย์'); return; }
+        if (!name.trim()) { setError('กรุณากรอกชื่อโรงแรม/พูลวิลล่า/โฮมสเตย์'); return; }
         setLoading(true);
         setError(null);
         try {
@@ -113,8 +113,8 @@ export default function AddHotelPage() {
                     <ArrowLeft className="w-5 h-5" />
                 </button>
                 <div>
-                    <h1 className="text-xl font-bold text-gray-900">เพิ่มโรงแรม/พูลวิลล่าห์/โฮมสเตย์ใหม่</h1>
-                    <p className="text-sm text-gray-500 mt-0.5">กรอกรายละเอียดเพื่อเพิ่มโรงแรม/พูลวิลล่าห์/โฮมสเตย์</p>
+                    <h1 className="text-xl font-bold text-gray-900">เพิ่มโรงแรม/พูลวิลล่า/โฮมสเตย์ใหม่</h1>
+                    <p className="text-sm text-gray-500 mt-0.5">กรอกรายละเอียดเพื่อเพิ่มโรงแรม/พูลวิลล่า/โฮมสเตย์</p>
                 </div>
             </div>
 
@@ -128,8 +128,8 @@ export default function AddHotelPage() {
                     <h2 className="text-base font-bold text-gray-900 mb-4">ข้อมูลพื้นฐาน</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">ชื่อโรงแรม/พูลวิลล่าห์/โฮมสเตย์ <span className="text-red-500">*</span></label>
-                            <input className={inputCls} placeholder="กรอกชื่อโรงแรม/พูลวิลล่าห์/โฮมสเตย์" value={name} onChange={e => setName(e.target.value)} />
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">ชื่อโรงแรม/พูลวิลล่า/โฮมสเตย์ <span className="text-red-500">*</span></label>
+                            <input className={inputCls} placeholder="กรอกชื่อโรงแรม/พูลวิลล่า/โฮมสเตย์" value={name} onChange={e => setName(e.target.value)} />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1.5">สถานที่</label>

@@ -180,7 +180,7 @@ export default function HotelEditPage() {
                     <ArrowLeft className="w-5 h-5" />
                 </button>
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">แก้ไขโรงแรม/พูลวิลล่าห์/โฮมสเตย์</h1>
+                    <h1 className="text-2xl font-bold text-gray-900">แก้ไขโรงแรม/พูลวิลล่า/โฮมสเตย์</h1>
                     <p className="text-sm text-gray-500 mt-0.5">อัปเดตข้อมูลที่พัก</p>
                 </div>
             </div>
@@ -191,12 +191,12 @@ export default function HotelEditPage() {
                     <h2 className="text-sm font-bold text-gray-900 mb-4">ข้อมูลพื้นฐาน</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="md:col-span-2">
-                            <label className="block text-xs font-medium text-gray-700 mb-1.5">ชื่อโรงแรม/พูลวิลล่าห์/โฮมสเตย์ <span className="text-red-500">*</span></label>
+                            <label className="block text-xs font-medium text-gray-700 mb-1.5">ชื่อโรงแรม/พูลวิลล่า/โฮมสเตย์ <span className="text-red-500">*</span></label>
                             <input
                                 value={name}
                                 onChange={e => setName(e.target.value)}
                                 className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-teal/30 focus:border-primary-teal transition"
-                                placeholder="ชื่อโรงแรม/พูลวิลล่าห์/โฮมสเตย์"
+                                placeholder="ชื่อโรงแรม/พูลวิลล่า/โฮมสเตย์"
                             />
                         </div>
                         <div>

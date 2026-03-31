@@ -314,7 +314,7 @@ export default function WizardPage() {
         {currentStep === 0 && (
           <div className="space-y-8 pb-20">
             <Card padding="lg">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">ชื่อโรงแรม/พูลวิลล่าห์/โฮมสเตย์ <span className="text-red-500">*</span></h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-4">ชื่อโรงแรม/พูลวิลล่า/โฮมสเตย์ <span className="text-red-500">*</span></h3>
               <Input placeholder="เช่น โรงแรมริเวอร์วิว แกรนด์" className="max-w-xl" value={hotelName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setHotelName(e.target.value)} />
               <p className="text-xs text-gray-400 mt-2">ชื่อนี้จะแสดงในเอกสารและหน้าจอทั้งหมด</p>
             </Card>
