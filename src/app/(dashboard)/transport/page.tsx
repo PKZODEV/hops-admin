@@ -15,7 +15,7 @@ interface Vehicle {
     images: string[]; features: string[];
     pricePerTrip?: number; pricePerHour?: number; pricePerDay?: number;
     route?: string; driverName?: string; isActive: boolean;
-    property: { id: string; name: string };
+    property?: { id: string; name: string } | null;
 }
 
 const STATUS_MAP: Record<string, { label: string; cls: string }> = {
@@ -232,7 +232,7 @@ function VehicleListView({ vehicles, onView }: { vehicles: Vehicle[]; onView: (i
                                 <td className="px-4 py-3.5 text-gray-600">{v.capacity} คน</td>
                                 <td className="px-4 py-3.5 text-gray-500 max-w-[140px] truncate">{v.route || '-'}</td>
                                 <td className="px-4 py-3.5 font-medium text-primary-teal">{priceLabel}</td>
-                                <td className="px-4 py-3.5 text-gray-500 max-w-[120px] truncate">{v.property.name}</td>
+                                <td className="px-4 py-3.5 text-gray-500 max-w-[120px] truncate">{v.property?.name ?? '-'}</td>
                                 <td className="px-4 py-3.5">
                                     <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${st.cls}`}>{st.label}</span>
                                 </td>

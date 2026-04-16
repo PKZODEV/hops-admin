@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -20,7 +20,9 @@ import {
     User,
     LogOut,
     Menu,
+    UserCheck,
 } from 'lucide-react';
+import { getStoredUser, clearStoredUser, type AuthUser, type UserRole } from '@/lib/auth';
 
 interface SidebarProps {
     isCollapsed: boolean;
@@ -29,27 +31,47 @@ interface SidebarProps {
     onMobileClose?: () => void;
 }
 
-const NAV_ITEMS = [
+interface NavItem {
+    href: string;
+    icon: React.ElementType;
+    label: string;
+    exact?: boolean;
+    roles?: UserRole[]; // empty/undefined => all roles
+}
+
+const NAV_ITEMS: NavItem[] = [
     { href: '/', icon: LayoutDashboard, label: 'แดชบอร์ด', exact: true },
-    { href: '/hotel-management', icon: Hotel, label: 'ที่พัก' },
-    { href: '/rooms', icon: BedDouble, label: 'ห้องพัก' },
-    { href: '/transport', icon: Car, label: 'ยานพาหนะ' },
-    { href: '/reservations', icon: CalendarDays, label: 'การจอง' },
-    { href: '/tours', icon: Compass, label: 'ทัวร์และกิจกรรม' },
-    { href: '/flights', icon: Plane, label: 'ตั๋วเครื่องบิน' },
-    { href: '/car-rental', icon: CarFront, label: 'รถเช่า' },
-    { href: '/customers', icon: Users, label: 'ลูกค้า' },
-    { href: '/inventory', icon: Package, label: 'คลังสินค้า' },
-    { href: '/partners', icon: Handshake, label: 'พันธมิตร' },
-    { href: '/promotions', icon: Tag, label: 'โปรโมชัน' },
-    { href: '/report', icon: BarChart2, label: 'รายงาน' },
+    { href: '/hotel-management', icon: Hotel, label: 'ที่พัก', roles: ['SUPER_ADMIN', 'ADMIN', 'HOTEL_OWNER'] },
+    { href: '/rooms', icon: BedDouble, label: 'ห้องพัก', roles: ['SUPER_ADMIN', 'ADMIN', 'HOTEL_OWNER'] },
+    { href: '/transport', icon: Car, label: 'ยานพาหนะ', roles: ['SUPER_ADMIN', 'ADMIN', 'HOTEL_OWNER', 'QUEUE_OWNER'] },
+    { href: '/registration-approvals', icon: UserCheck, label: 'อนุมัติการลงทะเบียน', roles: ['SUPER_ADMIN', 'ADMIN'] },
+    { href: '/reservations', icon: CalendarDays, label: 'การจอง', roles: ['SUPER_ADMIN', 'ADMIN'] },
+    { href: '/tours', icon: Compass, label: 'ทัวร์และกิจกรรม', roles: ['SUPER_ADMIN', 'ADMIN'] },
+    { href: '/flights', icon: Plane, label: 'ตั๋วเครื่องบิน', roles: ['SUPER_ADMIN', 'ADMIN'] },
+    { href: '/car-rental', icon: CarFront, label: 'รถเช่า', roles: ['SUPER_ADMIN', 'ADMIN'] },
+    { href: '/customers', icon: Users, label: 'ลูกค้า', roles: ['SUPER_ADMIN', 'ADMIN'] },
+    { href: '/inventory', icon: Package, label: 'คลังสินค้า', roles: ['SUPER_ADMIN', 'ADMIN'] },
+    { href: '/partners', icon: Handshake, label: 'พันธมิตร', roles: ['SUPER_ADMIN', 'ADMIN'] },
+    { href: '/promotions', icon: Tag, label: 'โปรโมชัน', roles: ['SUPER_ADMIN', 'ADMIN'] },
+    { href: '/report', icon: BarChart2, label: 'รายงาน', roles: ['SUPER_ADMIN', 'ADMIN'] },
     { href: '/settings', icon: Settings, label: 'ตั้งค่า' },
     { href: '/profile', icon: User, label: 'โปรไฟล์' },
 ];
 
+const canSee = (item: NavItem, role?: UserRole) => {
+    if (!item.roles) return true;
+    if (!role) return false;
+    return item.roles.includes(role);
+};
+
 export const Sidebar = ({ isCollapsed, toggleSidebar, isMobileOpen = false, onMobileClose }: SidebarProps) => {
     const pathname = usePathname();
     const router = useRouter();
+    const [user, setUser] = useState<AuthUser | null>(null);
+
+    useEffect(() => {
+        setUser(getStoredUser());
+    }, []);
 
     const handleLogout = async () => {
         try {
@@ -60,13 +82,14 @@ export const Sidebar = ({ isCollapsed, toggleSidebar, isMobileOpen = false, onMo
         } catch {
             // proceed regardless
         }
-        localStorage.removeItem('hops_user');
-        localStorage.removeItem('hops_property_id');
+        clearStoredUser();
         router.push('/login');
     };
 
     const isActive = (href: string, exact?: boolean) =>
         exact ? pathname === href : pathname === href || pathname.startsWith(href + '/');
+
+    const visibleItems = NAV_ITEMS.filter(item => canSee(item, user?.role));
 
     return (
         <>
@@ -102,7 +125,7 @@ export const Sidebar = ({ isCollapsed, toggleSidebar, isMobileOpen = false, onMo
 
                 {/* Navigation */}
                 <nav className="py-3 flex flex-col gap-0.5 px-3">
-                    {NAV_ITEMS.map(({ href, icon: Icon, label, exact }) => {
+                    {visibleItems.map(({ href, icon: Icon, label, exact }) => {
                         const active = isActive(href, exact);
                         return (
                             <Link
@@ -132,4 +155,3 @@ export const Sidebar = ({ isCollapsed, toggleSidebar, isMobileOpen = false, onMo
         </>
     );
 };
-

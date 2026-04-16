@@ -1,11 +1,15 @@
 'use client';
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 import { HopsLogo } from '@/components/ui/Logo';
 import { Mail, Lock, AlertCircle } from 'lucide-react';
+import { setStoredUser } from '@/lib/auth';
+
+const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,43 +17,47 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isRegister, setIsRegister] = useState(false);
-  const [name, setName] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
     try {
-      const endpoint = isRegister ? '/auth/register' : '/auth/login';
-      const body: Record<string, string> = { email, password };
-      if (isRegister && name) body.name = name;
-
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1'}${endpoint}`,
-        { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
-      );
+      const res = await fetch(`${API}/auth/login`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
       const data = await res.json();
       if (!res.ok) {
         const msg = Array.isArray(data.message) ? data.message.join(', ') : (data.message ?? 'เกิดข้อผิดพลาด');
         throw new Error(msg);
       }
 
-      // HttpOnly cookie is set by backend — only store non-sensitive user info
-      localStorage.setItem('hops_user', JSON.stringify(data.user));
+      setStoredUser(data.user);
 
-      // Check if they have a property set up already
-      const propRes = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1'}/properties`,
-        { credentials: 'include' }
-      );
-      const props = await propRes.json();
-      if (Array.isArray(props) && props.length > 0) {
-        localStorage.setItem('hops_property_id', props[0].id);
-        router.push('/');
-      } else {
-        router.push('/setup/welcome');
+      // Force password change on first login
+      if (data.user.mustChangePassword) {
+        router.push('/setup/change-password');
+        return;
       }
+
+      // SUPER_ADMIN goes straight to dashboard
+      if (data.user.role === 'SUPER_ADMIN' || data.user.role === 'ADMIN') {
+        router.push('/');
+        return;
+      }
+
+      // Other roles — pick first property if any, else dashboard
+      try {
+        const propRes = await fetch(`${API}/properties`, { credentials: 'include' });
+        const props = await propRes.json();
+        if (Array.isArray(props) && props.length > 0) {
+          localStorage.setItem('hops_property_id', props[0].id);
+        }
+      } catch {}
+      router.push('/');
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'เกิดข้อผิดพลาด');
     } finally {
@@ -63,9 +71,7 @@ export default function LoginPage() {
         <div className="flex flex-col items-center mb-8 text-center">
           <HopsLogo className="w-16 h-16 text-xl mb-6 shadow-sm" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Hotel Management System</h1>
-          <p className="text-gray-500 font-medium">
-            {isRegister ? 'สร้างบัญชีผู้ดูแลระบบ' : 'เข้าสู่ระบบเพื่อจัดการโรงแรมของคุณ'}
-          </p>
+          <p className="text-gray-500 font-medium">เข้าสู่ระบบเพื่อจัดการธุรกิจของคุณ</p>
         </div>
 
         {error && (
@@ -76,15 +82,6 @@ export default function LoginPage() {
         )}
 
         <form className="space-y-5" onSubmit={handleSubmit}>
-          {isRegister && (
-            <Input
-              label="ชื่อ (ไม่บังคับ)"
-              type="text"
-              placeholder="เช่น สมร ไพโรจน์"
-              value={name}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
-            />
-          )}
           <Input
             label="อีเมล"
             type="email"
@@ -104,26 +101,15 @@ export default function LoginPage() {
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
           />
           <Button size="lg" className="w-full text-base py-3.5 mt-2" type="submit" disabled={loading}>
-            {loading ? 'กำลังเข้าระบบ...' : isRegister ? 'สร้างบัญชี' : 'เข้าสู่ระบบ'}
+            {loading ? 'กำลังเข้าระบบ...' : 'เข้าสู่ระบบ'}
           </Button>
         </form>
 
         <div className="mt-6 text-center text-sm">
-          {isRegister ? (
-            <>
-              <span className="text-gray-500">มีบัญชีอยู่แล้ว? </span>
-              <button type="button" onClick={() => { setIsRegister(false); setError(null); }} className="font-bold text-primary-teal hover:underline">
-                เข้าสู่ระบบ
-              </button>
-            </>
-          ) : (
-            <>
-              <span className="text-gray-500">ยังไม่มีบัญชี? </span>
-              <button type="button" onClick={() => { setIsRegister(true); setError(null); }} className="font-bold text-primary-teal hover:underline">
-                ลงทะเบียน
-              </button>
-            </>
-          )}
+          <span className="text-gray-500">ยังไม่มีบัญชี? </span>
+          <Link href="/register" className="font-bold text-primary-teal hover:underline">
+            ลงทะเบียน
+          </Link>
         </div>
       </Card>
     </div>

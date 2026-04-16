@@ -129,11 +129,11 @@ export default function AddHotelPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1.5">ชื่อโรงแรม/พูลวิลล่า/โฮมสเตย์ <span className="text-red-500">*</span></label>
-                            <input className={inputCls} placeholder="กรอกชื่อโรงแรม/พูลวิลล่า/โฮมสเตย์" value={name} onChange={e => setName(e.target.value)} />
+                            <input className={inputCls} placeholder="เช่น โรงแรมศรีพันวา, บ้านสวนรีสอร์ท, Lanna Pool Villa" value={name} onChange={e => setName(e.target.value)} />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1.5">สถานที่</label>
-                            <input className={inputCls} placeholder="เมือง, จังหวัด" value={location} onChange={e => setLocation(e.target.value)} />
+                            <input className={inputCls} placeholder="เช่น ตัวเมืองเชียงใหม่, ป่าตอง ภูเก็ต" value={location} onChange={e => setLocation(e.target.value)} />
                         </div>
                     </div>
                     <div className="mb-4">
@@ -151,13 +151,13 @@ export default function AddHotelPage() {
                     </div>
                     <div className="mb-4">
                         <label className="block text-sm font-medium text-gray-700 mb-1.5">ที่อยู่</label>
-                        <input className={inputCls} placeholder="ที่อยู่เต็ม" value={address} onChange={e => setAddress(e.target.value)} />
+                        <input className={inputCls} placeholder="เช่น 123/45 ถ.นิมมานเหมินทร์ ต.สุเทพ อ.เมือง จ.เชียงใหม่ 50200" value={address} onChange={e => setAddress(e.target.value)} />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1.5">คำอธิบาย</label>
                         <textarea
                             className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:ring-primary-teal focus:border-primary-teal min-h-[100px] resize-none"
-                            placeholder="อธิบายเกี่ยวกับที่พัก"
+                            placeholder="เช่น โรงแรมบูทีคใจกลางเมือง บรรยากาศล้านนา ใกล้ถนนคนเดิน เดินทางสะดวก พร้อมสระว่ายน้ำและบริการสปา..."
                             value={description}
                             onChange={e => setDescription(e.target.value)}
                         />
@@ -184,7 +184,7 @@ export default function AddHotelPage() {
                             <div key={i} className="flex gap-3 items-center">
                                 <input
                                     className={inputCls + ' flex-1'}
-                                    placeholder="ชื่ออาคาร/หลัง"
+                                    placeholder="เช่น Main Building, อาคาร A, หลังสระว่ายน้ำ"
                                     value={b.name}
                                     onChange={e => updateBuilding(i, 'name', e.target.value)}
                                 />

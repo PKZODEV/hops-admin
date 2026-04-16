@@ -196,7 +196,7 @@ export default function HotelEditPage() {
                                 value={name}
                                 onChange={e => setName(e.target.value)}
                                 className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-teal/30 focus:border-primary-teal transition"
-                                placeholder="ชื่อโรงแรม/พูลวิลล่า/โฮมสเตย์"
+                                placeholder="เช่น โรงแรมศรีพันวา, บ้านสวนรีสอร์ท, Lanna Pool Villa"
                             />
                         </div>
                         <div>
@@ -242,7 +242,7 @@ export default function HotelEditPage() {
                                 value={address}
                                 onChange={e => setAddress(e.target.value)}
                                 className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-teal/30 focus:border-primary-teal transition"
-                                placeholder="ที่อยู่โรงแรม"
+                                placeholder="เช่น 123/45 ถ.นิมมานเหมินทร์ ต.สุเทพ อ.เมือง จ.เชียงใหม่ 50200"
                             />
                         </div>
                         <div className="md:col-span-2">
@@ -252,7 +252,7 @@ export default function HotelEditPage() {
                                 onChange={e => setDescription(e.target.value)}
                                 rows={3}
                                 className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-teal/30 focus:border-primary-teal transition resize-none"
-                                placeholder="คำอธิบายโรงแรม"
+                                placeholder="เช่น โรงแรมบูทีคใจกลางเมือง บรรยากาศล้านนา ใกล้ถนนคนเดิน เดินทางสะดวก พร้อมสระว่ายน้ำและบริการสปา..."
                             />
                         </div>
                     </div>

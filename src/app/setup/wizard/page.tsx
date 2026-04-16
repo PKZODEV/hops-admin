@@ -10,10 +10,10 @@ import { api } from '@/lib/api';
 import { Lightbulb, Plus, Save, Building2, BedDouble, Users, X, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-interface FloorForm { number: string }
-interface BuildingForm { name: string; floors: FloorForm[] }
-interface RoomTypeForm { name: string; price: string; maxGuests: string; description: string; bedType: string; images: string[]; useCustomName: boolean }
-interface RoomUnitForm { number: string; buildingId: string; floorId: string; roomTypeId: string; amenities: string[]; images: string[] }
+interface FloorForm { id?: string; number: string }
+interface BuildingForm { id?: string; name: string; floors: FloorForm[] }
+interface RoomTypeForm { id?: string; name: string; price: string; maxGuests: string; description: string; bedType: string; images: string[]; useCustomName: boolean }
+interface RoomUnitForm { id?: string; number: string; buildingId: string; floorId: string; roomTypeId: string; amenities: string[]; images: string[] }
 interface CreatedFloor { id: string; number: string }
 interface CreatedBuilding { id: string; name: string; floors: CreatedFloor[] }
 interface CreatedRoomType { id: string; name: string }
@@ -115,13 +115,54 @@ export default function WizardPage() {
         const hasRoomUnits = Array.isArray(roomUnits) && roomUnits.length > 0;
 
         if (hasBuildings) {
-          setCreatedBuildings(buildings.map((b: { id: string; name: string; floors?: { id: string; number: string }[] }) => ({
+          const buildingList = buildings.map((b: { id: string; name: string; floors?: { id: string; number: string }[] }) => ({
             id: b.id, name: b.name,
             floors: Array.isArray(b.floors) ? b.floors.map((f) => ({ id: f.id, number: f.number })) : [],
+          }));
+          setCreatedBuildings(buildingList);
+          // Hydrate the form so the user sees what's already saved (with ids tracked)
+          setBuildingForms(buildingList.map((b: { id: string; name: string; floors: { id: string; number: string }[] }) => ({
+            id: b.id,
+            name: b.name,
+            floors: b.floors.map((f) => ({ id: f.id, number: f.number })),
           })));
         }
         if (hasRoomTypes) {
-          setCreatedRoomTypes(rooms.map((rt: { id: string; name: string }) => ({ id: rt.id, name: rt.name })));
+          type DbRoomType = {
+            id: string; name: string; description?: string | null; bedType?: string | null;
+            maxGuests: number; images?: string[];
+            rates?: { price: number | string }[];
+          };
+          const rt = rooms as DbRoomType[];
+          setCreatedRoomTypes(rt.map((r) => ({ id: r.id, name: r.name })));
+          setRoomTypeForms(rt.map((r) => ({
+            id: r.id,
+            name: r.name,
+            price: r.rates && r.rates.length > 0 ? String(r.rates[0].price) : '',
+            maxGuests: String(r.maxGuests),
+            description: r.description ?? '',
+            bedType: r.bedType ?? '',
+            images: r.images ?? [],
+            useCustomName: !ROOM_TYPE_PRESETS.includes(r.name),
+          })));
+        }
+        if (hasRoomUnits) {
+          type DbRoomUnit = {
+            id: string; number: string; floorId: string; roomTypeId: string;
+            amenities?: string[]; images?: string[];
+            floor?: { buildingId: string };
+          };
+          const ru = roomUnits as DbRoomUnit[];
+          setCreatedRoomUnits(ru.map((u) => ({ id: u.id, number: u.number, floorId: u.floorId, roomTypeId: u.roomTypeId })));
+          setRoomUnitForms(ru.map((u) => ({
+            id: u.id,
+            number: u.number,
+            buildingId: u.floor?.buildingId ?? '',
+            floorId: u.floorId,
+            roomTypeId: u.roomTypeId,
+            amenities: u.amenities ?? [],
+            images: u.images ?? [],
+          })));
         }
 
         // Resume at first incomplete step
@@ -187,44 +228,75 @@ export default function WizardPage() {
           if (typeof window !== 'undefined') localStorage.setItem('hops_property_id', property.id);
         }
       } else if (currentStep === 1) {
-        if (createdBuildings.length === 0) {
-          const created: CreatedBuilding[] = [];
-          for (const bForm of buildingForms) {
+        // Create only buildings/floors that don't have an id yet
+        const updatedForms: BuildingForm[] = [];
+        const allBuildings: CreatedBuilding[] = [];
+        for (const bForm of buildingForms) {
+          let buildingId = bForm.id;
+          let buildingName = bForm.name;
+          if (!buildingId) {
             const building = await api.post<{ id: string; name: string }>('/buildings', { name: bForm.name.trim(), propertyId: propertyId! });
-            const floors: CreatedFloor[] = [];
-            for (const fForm of bForm.floors) {
-              const floor = await api.post<{ id: string; number: string }>('/floors', { number: fForm.number.trim(), buildingId: building.id });
-              floors.push({ id: floor.id, number: floor.number });
+            buildingId = building.id;
+            buildingName = building.name;
+          }
+          const updatedFloors: FloorForm[] = [];
+          const createdFloors: CreatedFloor[] = [];
+          for (const fForm of bForm.floors) {
+            if (fForm.id) {
+              updatedFloors.push(fForm);
+              createdFloors.push({ id: fForm.id, number: fForm.number });
+            } else {
+              const floor = await api.post<{ id: string; number: string }>('/floors', { number: fForm.number.trim(), buildingId });
+              updatedFloors.push({ id: floor.id, number: floor.number });
+              createdFloors.push({ id: floor.id, number: floor.number });
             }
-            created.push({ id: building.id, name: building.name, floors });
           }
-          setCreatedBuildings(created);
+          updatedForms.push({ id: buildingId, name: buildingName, floors: updatedFloors });
+          allBuildings.push({ id: buildingId, name: buildingName, floors: createdFloors });
         }
+        setBuildingForms(updatedForms);
+        setCreatedBuildings(allBuildings);
       } else if (currentStep === 2) {
-        if (createdRoomTypes.length === 0) {
-          const createdTypes: CreatedRoomType[] = [];
-          for (const rtForm of roomTypeForms) {
-            const roomType = await api.post<{ id: string; name: string }>('/rooms', {
-              name: rtForm.name.trim(), maxGuests: parseInt(rtForm.maxGuests),
-              ...(rtForm.description ? { description: rtForm.description } : {}),
-              ...(rtForm.bedType ? { bedType: rtForm.bedType } : {}),
-              images: rtForm.images,
-              propertyId: propertyId!,
-            });
-            await api.post('/rates', { name: 'ราคาพื้นฐาน', price: parseFloat(rtForm.price), roomTypeId: roomType.id });
-            createdTypes.push({ id: roomType.id, name: roomType.name });
+        // Create only room types that don't have an id yet (avoid duplicates on back/forward)
+        const updatedForms: RoomTypeForm[] = [];
+        const allTypes: CreatedRoomType[] = [];
+        for (const rtForm of roomTypeForms) {
+          if (rtForm.id) {
+            updatedForms.push(rtForm);
+            allTypes.push({ id: rtForm.id, name: rtForm.name });
+            continue;
           }
-          setCreatedRoomTypes(createdTypes);
+          const roomType = await api.post<{ id: string; name: string }>('/rooms', {
+            name: rtForm.name.trim(), maxGuests: parseInt(rtForm.maxGuests),
+            ...(rtForm.description ? { description: rtForm.description } : {}),
+            ...(rtForm.bedType ? { bedType: rtForm.bedType } : {}),
+            images: rtForm.images,
+            propertyId: propertyId!,
+          });
+          await api.post('/rates', { name: 'ราคาพื้นฐาน', price: parseFloat(rtForm.price), roomTypeId: roomType.id });
+          updatedForms.push({ ...rtForm, id: roomType.id });
+          allTypes.push({ id: roomType.id, name: roomType.name });
         }
+        setRoomTypeForms(updatedForms);
+        setCreatedRoomTypes(allTypes);
       } else if (currentStep === 3) {
-        const createdUnits: CreatedRoomUnit[] = [];
+        // Create only room units that don't have an id yet
+        const updatedForms: RoomUnitForm[] = [];
+        const allUnits: CreatedRoomUnit[] = [];
         for (const ruForm of roomUnitForms) {
+          if (ruForm.id) {
+            updatedForms.push(ruForm);
+            allUnits.push({ id: ruForm.id, number: ruForm.number, floorId: ruForm.floorId, roomTypeId: ruForm.roomTypeId });
+            continue;
+          }
           const unit = await api.post<{ id: string; number: string; floorId: string; roomTypeId: string }>('/room-units', {
             number: ruForm.number.trim(), floorId: ruForm.floorId, roomTypeId: ruForm.roomTypeId, amenities: ruForm.amenities, images: ruForm.images,
           });
-          createdUnits.push({ id: unit.id, number: unit.number, floorId: ruForm.floorId, roomTypeId: ruForm.roomTypeId });
+          updatedForms.push({ ...ruForm, id: unit.id });
+          allUnits.push({ id: unit.id, number: unit.number, floorId: ruForm.floorId, roomTypeId: ruForm.roomTypeId });
         }
-        setCreatedRoomUnits(createdUnits);
+        setRoomUnitForms(updatedForms);
+        setCreatedRoomUnits(allUnits);
       }
       setCurrentStep((prev: number) => prev + 1);
     } catch (e: unknown) {
@@ -421,7 +493,7 @@ export default function WizardPage() {
                       <option value="custom">กำหนดชื่อเอง...</option>
                     </select>
                     {rt.useCustomName && (
-                      <Input className="mt-2" value={rt.name} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateRoomType(i, 'name', e.target.value)} placeholder="กรอกชื่อประเภทห้องพัก" />
+                      <Input className="mt-2" value={rt.name} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateRoomType(i, 'name', e.target.value)} placeholder="เช่น Honeymoon Suite, Garden View, ครอบครัว" />
                     )}
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

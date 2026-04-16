@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, MapPin, Star, Eye, Pencil, Plus, SlidersHorizontal } from 'lucide-react';
+import { getStoredUser } from '@/lib/auth';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
 
@@ -37,6 +38,9 @@ export default function HotelManagementPage() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
+    const [role, setRole] = useState<string | null>(null);
+    useEffect(() => { setRole(getStoredUser()?.role ?? null); }, []);
+    const canAddMore = role === 'SUPER_ADMIN' || role === 'ADMIN' || (role === 'HOTEL_OWNER' && hotels.length === 0);
 
     useEffect(() => {
         const fetchHotels = async () => {
@@ -91,13 +95,15 @@ export default function HotelManagementPage() {
                     <h1 className="text-2xl font-bold text-gray-900">Hotel Management</h1>
                     <p className="text-sm text-gray-500 mt-0.5">จัดการโรงแรมทั้งหมดของคุณ</p>
                 </div>
-                <button
-                    onClick={() => router.push('/hotel-management/add')}
-                    className="flex items-center gap-2 bg-primary-teal text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-teal-600 transition-colors shadow-sm"
-                >
-                    <Plus className="w-4 h-4" />
-                    เพิ่มโรงแรม
-                </button>
+                {canAddMore && (
+                    <button
+                        onClick={() => router.push('/hotel-management/add')}
+                        className="flex items-center gap-2 bg-primary-teal text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-teal-600 transition-colors shadow-sm"
+                    >
+                        <Plus className="w-4 h-4" />
+                        เพิ่มโรงแรม
+                    </button>
+                )}
             </div>
 
             {/* Filters */}

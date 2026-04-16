@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+const PUBLIC_PATHS = ['/login', '/register'];
+
 export function middleware(request: NextRequest) {
   const token = request.cookies.get('hops_token')?.value;
   const { pathname } = request.nextUrl;
-  const isLoginPage = pathname === '/login';
+  const isPublic = PUBLIC_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'));
 
-  if (!token && !isLoginPage) {
+  if (!token && !isPublic) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  if (token && isLoginPage) {
+  if (token && pathname === '/login') {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
@@ -17,5 +19,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon\\.ico).*)'],
+  matcher: ['/((?!api|_next/static|_next/image|favicon\\.ico|data/).*)'],
 };
