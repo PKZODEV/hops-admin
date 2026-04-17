@@ -16,13 +16,15 @@ interface RoomUnit {
 }
 
 const STATUS_MAP: Record<string, { label: string; cls: string; dot: string }> = {
-    AVAILABLE: { label: 'ว่าง', cls: 'bg-green-100 text-green-700 border-green-200', dot: 'bg-green-500' },
-    OCCUPIED: { label: 'ไม่ว่าง', cls: 'bg-blue-100 text-blue-700 border-blue-200', dot: 'bg-blue-500' },
-    MAINTENANCE: { label: 'ซ่อมบำรุง', cls: 'bg-red-100 text-red-500 border-red-200', dot: 'bg-red-500' },
-    DISABLED: { label: 'ปิดใช้งาน', cls: 'bg-gray-100 text-gray-500 border-gray-200', dot: 'bg-gray-400' },
+    AVAILABLE:   { label: 'ว่าง',            cls: 'bg-green-100 text-green-700 border-green-200',   dot: 'bg-green-500' },
+    RESERVED:    { label: 'ติดจอง',          cls: 'bg-amber-100 text-amber-700 border-amber-200',   dot: 'bg-amber-500' },
+    OCCUPIED:    { label: 'กำลังเข้าพัก',    cls: 'bg-blue-100 text-blue-700 border-blue-200',      dot: 'bg-blue-500' },
+    CLEANING:    { label: 'ทำความสะอาด',     cls: 'bg-purple-100 text-purple-700 border-purple-200', dot: 'bg-purple-500' },
+    MAINTENANCE: { label: 'ซ่อมบำรุง',       cls: 'bg-orange-100 text-orange-700 border-orange-200', dot: 'bg-orange-500' },
+    DISABLED:    { label: 'ปิดใช้งาน',       cls: 'bg-gray-100 text-gray-500 border-gray-200',      dot: 'bg-gray-400' },
 };
 
-const ALL_STATUSES = ['AVAILABLE', 'OCCUPIED', 'MAINTENANCE', 'DISABLED'];
+const ALL_STATUSES = ['AVAILABLE', 'RESERVED', 'OCCUPIED', 'CLEANING', 'MAINTENANCE', 'DISABLED'];
 
 // Generate next 7 days for the availability calendar
 function getNext7Days() {

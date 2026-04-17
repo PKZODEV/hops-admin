@@ -6,14 +6,10 @@ import { ImageUploader } from '@/components/ui/ImageUploader';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
 
-const AMENITY_OPTIONS = [
-    'Wi-Fi ฟรี', 'อาหารเช้า', 'ร้านอาหาร', 'ฟิตแนส', 'ที่จอดรถ', 'สระว่ายน้ำ',
-    'สปา', 'บริการห้อง', 'ซักรีด', 'บริการต้อนรับ 24 ชม.', 'ห้องประชุม', 'รับส่งสนามบิน',
-];
-
 interface BuildingRow { id?: string; name: string; floorCount: number; originalFloorCount: number; }
 interface RawBuilding { id: string; name: string; floors: unknown[]; }
 interface PropertyCategory { id: string; name: string }
+interface AmenityItem { id: string; name: string; icon?: string | null; type: 'HOTEL' | 'ROOM' }
 
 export default function HotelEditPage() {
     const router = useRouter();
@@ -33,6 +29,7 @@ export default function HotelEditPage() {
     const [amenities, setAmenities] = useState<string[]>([]);
     const [propertyCategoryId, setPropertyCategoryId] = useState('');
     const [categories, setCategories] = useState<PropertyCategory[]>([]);
+    const [amenityOptions, setAmenityOptions] = useState<AmenityItem[]>([]);
 
     const [buildings, setBuildings] = useState<BuildingRow[]>([]);
     const [removedBuildingIds, setRemovedBuildingIds] = useState<string[]>([]);
@@ -41,6 +38,10 @@ export default function HotelEditPage() {
         fetch(`${API}/property-categories`)
             .then(r => r.json())
             .then((data: PropertyCategory[]) => Array.isArray(data) && setCategories(data))
+            .catch(() => {});
+        fetch(`${API}/amenities?type=HOTEL`, { credentials: 'include' })
+            .then(r => r.json())
+            .then((data: AmenityItem[]) => Array.isArray(data) && setAmenityOptions(data))
             .catch(() => {});
     }, []);
 
@@ -319,18 +320,22 @@ export default function HotelEditPage() {
                 {/* Amenities */}
                 <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
                     <h2 className="text-sm font-bold text-gray-900 mb-4">สิ่งอำนวยความสะดวก</h2>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                        {AMENITY_OPTIONS.map(a => {
-                            const selected = amenities.includes(a);
-                            return (
-                                <button key={a} type="button" onClick={() => toggleAmenity(a)}
-                                    className={`flex items-center gap-2 px-3.5 py-2.5 rounded-lg border text-sm transition-all ${selected ? 'border-primary-teal bg-teal-50 text-teal-700 font-medium' : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'}`}>
-                                    <span className={`w-2 h-2 rounded-full shrink-0 ${selected ? 'bg-primary-teal' : 'bg-gray-300'}`} />
-                                    {a}
-                                </button>
-                            );
-                        })}
-                    </div>
+                    {amenityOptions.length === 0 ? (
+                        <p className="text-sm text-gray-400">ยังไม่มีรายการ — เพิ่มที่เมนู &quot;กำหนดข้อมูล → สิ่งอำนวยความสะดวก&quot;</p>
+                    ) : (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                            {amenityOptions.map(a => {
+                                const selected = amenities.includes(a.name);
+                                return (
+                                    <button key={a.id} type="button" onClick={() => toggleAmenity(a.name)}
+                                        className={`flex items-center gap-2 px-3.5 py-2.5 rounded-lg border text-sm transition-all ${selected ? 'border-primary-teal bg-teal-50 text-teal-700 font-medium' : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'}`}>
+                                        <span className={`w-2 h-2 rounded-full shrink-0 ${selected ? 'bg-primary-teal' : 'bg-gray-300'}`} />
+                                        {a.name}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
 
                 {/* Error */}

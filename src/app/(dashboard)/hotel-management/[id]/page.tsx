@@ -21,10 +21,12 @@ interface Property {
 }
 
 const STATUS_MAP: Record<string, { label: string; cls: string }> = {
-    AVAILABLE: { label: 'ว่าง', cls: 'bg-green-100 text-green-700' },
-    OCCUPIED: { label: 'ไม่ว่าง', cls: 'bg-red-100 text-red-600' },
-    MAINTENANCE: { label: 'ซ่อมบำรุง', cls: 'bg-orange-100 text-orange-600' },
-    DISABLED: { label: 'ปิดใช้งาน', cls: 'bg-gray-100 text-gray-500' },
+    AVAILABLE:   { label: 'ว่าง',          cls: 'bg-green-100 text-green-700' },
+    RESERVED:    { label: 'ติดจอง',        cls: 'bg-amber-100 text-amber-700' },
+    OCCUPIED:    { label: 'กำลังเข้าพัก',  cls: 'bg-blue-100 text-blue-700' },
+    CLEANING:    { label: 'ทำความสะอาด',   cls: 'bg-purple-100 text-purple-700' },
+    MAINTENANCE: { label: 'ซ่อมบำรุง',     cls: 'bg-orange-100 text-orange-600' },
+    DISABLED:    { label: 'ปิดใช้งาน',     cls: 'bg-gray-100 text-gray-500' },
 };
 
 export default function HotelDetailPage() {

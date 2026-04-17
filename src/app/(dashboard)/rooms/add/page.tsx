@@ -11,17 +11,15 @@ interface Building { id: string; name: string; floors: Floor[] }
 interface Floor { id: string; number: string }
 interface Rate { price: number }
 interface RoomType { id: string; name: string; rates: Rate[] }
+interface AmenityItem { id: string; name: string; icon?: string | null; type: 'HOTEL' | 'ROOM' }
 
 const STATUS_OPTIONS = [
-    { value: 'AVAILABLE', label: 'ว่าง (Available)' },
-    { value: 'OCCUPIED', label: 'ไม่ว่าง (Occupied)' },
+    { value: 'AVAILABLE',   label: 'ว่าง (Available)' },
+    { value: 'RESERVED',    label: 'ติดจอง (Reserved)' },
+    { value: 'OCCUPIED',    label: 'กำลังเข้าพัก (Occupied)' },
+    { value: 'CLEANING',    label: 'ทำความสะอาด (Cleaning)' },
     { value: 'MAINTENANCE', label: 'ซ่อมบำรุง (Maintenance)' },
-    { value: 'DISABLED', label: 'ปิดใช้งาน (Disabled)' },
-];
-
-const ROOM_AMENITY_OPTIONS = [
-    'Wi-Fi ฟรี', 'ทีวี', 'เครื่องปรับอากาศ', 'ตู้เย็น', 'มินิบาร์', 'อ่างอาบน้ำ',
-    'ระเบียง', 'ตู้เซฟ', 'เครื่องชงกาแฟ', 'เครื่องเป่าผม', 'ชุดคิวส์',
+    { value: 'DISABLED',    label: 'ปิดใช้งาน (Disabled)' },
 ];
 
 export default function AddRoomPage() {
@@ -39,6 +37,14 @@ export default function AddRoomPage() {
     const [status, setStatus] = useState('AVAILABLE');
     const [images, setImages] = useState<string[]>([]);
     const [amenities, setAmenities] = useState<string[]>([]);
+    const [amenityOptions, setAmenityOptions] = useState<AmenityItem[]>([]);
+
+    useEffect(() => {
+        fetch(`${API}/amenities?type=ROOM`, { credentials: 'include' })
+            .then(r => r.json())
+            .then((data: AmenityItem[]) => Array.isArray(data) && setAmenityOptions(data))
+            .catch(() => {});
+    }, []);
 
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
@@ -227,18 +233,22 @@ export default function AddRoomPage() {
                 {/* Amenities */}
                 <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
                     <h2 className="text-sm font-bold text-gray-900 mb-4">สิ่งอำนวยความสะดวกในห้อง</h2>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                        {ROOM_AMENITY_OPTIONS.map(a => {
-                            const selected = amenities.includes(a);
-                            return (
-                                <button key={a} type="button" onClick={() => toggleAmenity(a)}
-                                    className={`flex items-center gap-2 px-3.5 py-2.5 rounded-lg border text-sm transition-all ${selected ? 'border-primary-teal bg-teal-50 text-teal-700 font-medium' : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'}`}>
-                                    <span className={`w-2 h-2 rounded-full shrink-0 ${selected ? 'bg-primary-teal' : 'bg-gray-300'}`} />
-                                    {a}
-                                </button>
-                            );
-                        })}
-                    </div>
+                    {amenityOptions.length === 0 ? (
+                        <p className="text-sm text-gray-400">ยังไม่มีรายการ — เพิ่มที่เมนู &quot;กำหนดข้อมูล → สิ่งอำนวยความสะดวก&quot;</p>
+                    ) : (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                            {amenityOptions.map(a => {
+                                const selected = amenities.includes(a.name);
+                                return (
+                                    <button key={a.id} type="button" onClick={() => toggleAmenity(a.name)}
+                                        className={`flex items-center gap-2 px-3.5 py-2.5 rounded-lg border text-sm transition-all ${selected ? 'border-primary-teal bg-teal-50 text-teal-700 font-medium' : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'}`}>
+                                        <span className={`w-2 h-2 rounded-full shrink-0 ${selected ? 'bg-primary-teal' : 'bg-gray-300'}`} />
+                                        {a.name}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
 
                 {/* Error */}

@@ -1,53 +1,79 @@
 'use client';
 
-import React from 'react';
-import { Wifi, Car, Coffee, Waves, Dumbbell, Wind, UtensilsCrossed, Sparkles, BellRing, WashingMachine, Users, PlaneTakeoff } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import * as Icons from 'lucide-react';
+import { Sparkles, LucideIcon } from 'lucide-react';
 
-interface AmenitieSelectorProps {
+const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
+
+interface AmenitiesSelectorProps {
     selected: string[];
     onChange: (selected: string[]) => void;
+    type?: 'HOTEL' | 'ROOM';
+    columns?: number;
 }
 
-export const AmenitiesSelector = ({ selected, onChange }: AmenitieSelectorProps) => {
-    const amenities = [
-        { id: 'wifi', label: 'Wi-Fi ฟรี', icon: Wifi },
-        { id: 'breakfast', label: 'อาหารเช้า', icon: Coffee },
-        { id: 'restaurant', label: 'ร้านอาหาร', icon: UtensilsCrossed },
-        { id: 'gym', label: 'ฟิตแนส', icon: Dumbbell },
-        { id: 'parking', label: 'ที่จอดรถ', icon: Car },
-        { id: 'pool', label: 'สระว่ายน้ำ', icon: Waves },
-        { id: 'spa', label: 'สปา', icon: Sparkles },
-        { id: 'roomservice', label: 'บริการห้อง', icon: BellRing },
-        { id: 'laundry', label: 'ซักรีด', icon: WashingMachine },
-        { id: 'reception24', label: 'บริการต้อนรับ 24 ชม.', icon: Users },
-        { id: 'meetingroom', label: 'ห้องประชุม', icon: Wind },
-        { id: 'airporttransfer', label: 'รับส่งสนามบิน', icon: PlaneTakeoff },
-    ];
+interface Amenity {
+    id: string;
+    name: string;
+    icon?: string | null;
+    type: 'HOTEL' | 'ROOM';
+}
 
-    const toggleAmenity = (id: string) => {
-        onChange(
-            selected.includes(id) ? selected.filter(i => i !== id) : [...selected, id]
-        );
+function renderIcon(name?: string | null, className = 'w-5 h-5') {
+    if (!name) return <Sparkles className={className} />;
+    const Comp = (Icons as unknown as Record<string, LucideIcon>)[name];
+    return Comp ? <Comp className={className} /> : <Sparkles className={className} />;
+}
+
+export const AmenitiesSelector = ({ selected, onChange, type = 'HOTEL', columns = 3 }: AmenitiesSelectorProps) => {
+    const [amenities, setAmenities] = useState<Amenity[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        setLoading(true);
+        fetch(`${API}/amenities?type=${type}`, { credentials: 'include' })
+            .then(r => r.json())
+            .then((data: Amenity[]) => setAmenities(Array.isArray(data) ? data : []))
+            .catch(() => setAmenities([]))
+            .finally(() => setLoading(false));
+    }, [type]);
+
+    const toggleAmenity = (name: string) => {
+        onChange(selected.includes(name) ? selected.filter(i => i !== name) : [...selected, name]);
     };
 
+    if (loading) {
+        return <div className="text-sm text-gray-400 py-6 animate-pulse">กำลังโหลดสิ่งอำนวยความสะดวก...</div>;
+    }
+
+    if (amenities.length === 0) {
+        return <div className="text-sm text-gray-400 py-6">ยังไม่มีรายการสิ่งอำนวยความสะดวก</div>;
+    }
+
+    const gridCls = columns === 2
+        ? 'grid grid-cols-1 md:grid-cols-2 gap-3'
+        : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3';
+
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {amenities.map(amenity => {
-                const isSelected = selected.includes(amenity.id);
+        <div className={gridCls}>
+            {amenities.map(a => {
+                const isSelected = selected.includes(a.name);
                 return (
                     <button
-                        key={amenity.id}
+                        key={a.id}
                         type="button"
-                        onClick={() => toggleAmenity(amenity.id)}
-                        className={`
-              flex items-center gap-3 p-4 rounded-lg border text-sm font-medium transition-colors text-left
-              ${isSelected
+                        onClick={() => toggleAmenity(a.name)}
+                        className={`flex items-center gap-3 p-4 rounded-lg border text-sm font-medium transition-colors text-left ${
+                            isSelected
                                 ? 'border-primary-teal bg-teal-50 text-primary-teal'
-                                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'}
-            `}
+                                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                        }`}
                     >
-                        <amenity.icon className={`w-5 h-5 ${isSelected ? 'text-primary-teal' : 'text-gray-500'}`} />
-                        {amenity.label}
+                        <span className={isSelected ? 'text-primary-teal' : 'text-gray-500'}>
+                            {renderIcon(a.icon, 'w-5 h-5')}
+                        </span>
+                        {a.name}
                     </button>
                 );
             })}

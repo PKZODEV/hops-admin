@@ -6,15 +6,9 @@ import { ImageUploader } from '@/components/ui/ImageUploader';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
 
-const AMENITY_OPTIONS = [
-    'Wi-Fi ฟรี', 'อาหารเช้า', 'ร้านอาหาร',
-    'ฟิตแนส', 'ที่จอดรถ', 'สระว่ายน้ำ',
-    'สปา', 'บริการห้อง', 'ซักรีด',
-    'บริการต้อนรับ 24 ชม.', 'ห้องประชุม', 'รับส่งสนามบิน',
-];
-
 interface BuildingInput { name: string; floors: string }
 interface PropertyCategory { id: string; name: string }
+interface AmenityItem { id: string; name: string; icon?: string | null; type: 'HOTEL' | 'ROOM' }
 
 export default function AddHotelPage() {
     const router = useRouter();
@@ -33,11 +27,16 @@ export default function AddHotelPage() {
     const [newRoomType, setNewRoomType] = useState('');
     const [propertyCategoryId, setPropertyCategoryId] = useState('');
     const [categories, setCategories] = useState<PropertyCategory[]>([]);
+    const [amenityOptions, setAmenityOptions] = useState<AmenityItem[]>([]);
 
     useEffect(() => {
         fetch(`${API}/property-categories`)
             .then(r => r.json())
             .then((data: PropertyCategory[]) => Array.isArray(data) && setCategories(data))
+            .catch(() => {});
+        fetch(`${API}/amenities?type=HOTEL`, { credentials: 'include' })
+            .then(r => r.json())
+            .then((data: AmenityItem[]) => Array.isArray(data) && setAmenityOptions(data))
             .catch(() => {});
     }, []);
 
@@ -211,17 +210,21 @@ export default function AddHotelPage() {
                 {/* Amenities */}
                 <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
                     <h2 className="text-base font-bold text-gray-900 mb-4">สิ่งอำนวยความสะดวก</h2>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {AMENITY_OPTIONS.map(a => (
-                            <label key={a} className={`flex items-center gap-2.5 p-3 border rounded-lg cursor-pointer text-sm transition-colors ${selectedAmenities.includes(a) ? 'border-primary-teal bg-teal-50 text-primary-teal' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
-                                <div className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-colors ${selectedAmenities.includes(a) ? 'border-primary-teal bg-primary-teal' : 'border-gray-300'}`}>
-                                    {selectedAmenities.includes(a) && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-                                </div>
-                                <input type="checkbox" checked={selectedAmenities.includes(a)} onChange={() => toggleAmenity(a)} className="hidden" />
-                                {a}
-                            </label>
-                        ))}
-                    </div>
+                    {amenityOptions.length === 0 ? (
+                        <p className="text-sm text-gray-400">ยังไม่มีรายการ — เพิ่มที่เมนู &quot;กำหนดข้อมูล → สิ่งอำนวยความสะดวก&quot;</p>
+                    ) : (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {amenityOptions.map(a => (
+                                <label key={a.id} className={`flex items-center gap-2.5 p-3 border rounded-lg cursor-pointer text-sm transition-colors ${selectedAmenities.includes(a.name) ? 'border-primary-teal bg-teal-50 text-primary-teal' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+                                    <div className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-colors ${selectedAmenities.includes(a.name) ? 'border-primary-teal bg-primary-teal' : 'border-gray-300'}`}>
+                                        {selectedAmenities.includes(a.name) && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                                    </div>
+                                    <input type="checkbox" checked={selectedAmenities.includes(a.name)} onChange={() => toggleAmenity(a.name)} className="hidden" />
+                                    {a.name}
+                                </label>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* Custom Room Types */}

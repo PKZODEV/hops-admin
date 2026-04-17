@@ -1,4 +1,4 @@
-export type RoomStatus = 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE';
+export type RoomStatus = 'AVAILABLE' | 'RESERVED' | 'OCCUPIED' | 'CLEANING' | 'MAINTENANCE' | 'DISABLED';
 
 export type BookingStatus = 'CONFIRMED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'CANCELLED';
 

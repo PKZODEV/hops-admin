@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation';
 
 interface FloorForm { id?: string; number: string }
 interface BuildingForm { id?: string; name: string; floors: FloorForm[] }
-interface RoomTypeForm { id?: string; name: string; price: string; maxGuests: string; description: string; bedType: string; images: string[]; useCustomName: boolean }
+interface RoomTypeForm { id?: string; name: string; price: string; maxGuests: string; description: string; bedType: string; images: string[]; useCustomName: boolean; useCustomBedType: boolean; roomCount: string }
 interface RoomUnitForm { id?: string; number: string; buildingId: string; floorId: string; roomTypeId: string; amenities: string[]; images: string[] }
 interface CreatedFloor { id: string; number: string }
 interface CreatedBuilding { id: string; name: string; floors: CreatedFloor[] }
@@ -20,17 +20,10 @@ interface CreatedRoomType { id: string; name: string }
 interface CreatedRoomUnit { id: string; number: string; floorId: string; roomTypeId: string }
 
 interface PropertyCategory { id: string; name: string }
+interface AmenityItem { id: string; name: string; icon?: string | null; type: 'HOTEL' | 'ROOM' }
 
 const ROOM_TYPE_PRESETS = ['Standard', 'Superior', 'Deluxe', 'Junior Suite', 'Suite', 'Family Room', 'Twin Room', 'Double Room'];
-
-const ROOM_UNIT_AMENITIES = [
-  { id: 'bathtub', label: 'อ่างอาบน้ำ' },
-  { id: 'wifi', label: 'Wi-Fi ฟรี' },
-  { id: 'tv', label: 'ทีวี' },
-  { id: 'minibar', label: 'มินิบาร์' },
-  { id: 'ac', label: 'เครื่องปรับอากาศ' },
-  { id: 'balcony', label: 'ระเบียง' },
-];
+const BED_TYPE_PRESETS = ['Single Bed', 'Twin Bed', 'Double Bed', 'Queen Bed', 'King Bed', 'Super King Bed', 'Bunk Bed', 'Sofa Bed'];
 
 const STEP_TITLES = [
   'ตั้งค่าข้อมูลโรงแรม',
@@ -67,8 +60,9 @@ export default function WizardPage() {
   ]);
 
   const [roomTypeForms, setRoomTypeForms] = useState<RoomTypeForm[]>([
-    { name: 'Standard', price: '1500', maxGuests: '2', description: '', bedType: '', images: [], useCustomName: false },
+    { name: 'Standard', price: '1500', maxGuests: '2', description: '', bedType: '', images: [], useCustomName: false, useCustomBedType: false, roomCount: '1' },
   ]);
+  const [roomAmenityOptions, setRoomAmenityOptions] = useState<AmenityItem[]>([]);
 
   const [roomUnitForms, setRoomUnitForms] = useState<RoomUnitForm[]>([
     { number: '', buildingId: '', floorId: '', roomTypeId: '', amenities: [], images: [] },
@@ -85,6 +79,10 @@ export default function WizardPage() {
     fetch(`${BASE}/property-categories`)
       .then(r => r.json())
       .then((data: PropertyCategory[]) => Array.isArray(data) && setCategories(data))
+      .catch(() => {});
+    fetch(`${BASE}/amenities?type=ROOM`, { credentials: 'include' })
+      .then(r => r.json())
+      .then((data: AmenityItem[]) => Array.isArray(data) && setRoomAmenityOptions(data))
       .catch(() => {});
   }, []);
 
@@ -134,6 +132,12 @@ export default function WizardPage() {
             rates?: { price: number | string }[];
           };
           const rt = rooms as DbRoomType[];
+          const unitCountByType: Record<string, number> = {};
+          if (Array.isArray(roomUnits)) {
+            (roomUnits as { roomTypeId: string }[]).forEach(u => {
+              unitCountByType[u.roomTypeId] = (unitCountByType[u.roomTypeId] || 0) + 1;
+            });
+          }
           setCreatedRoomTypes(rt.map((r) => ({ id: r.id, name: r.name })));
           setRoomTypeForms(rt.map((r) => ({
             id: r.id,
@@ -144,6 +148,8 @@ export default function WizardPage() {
             bedType: r.bedType ?? '',
             images: r.images ?? [],
             useCustomName: !ROOM_TYPE_PRESETS.includes(r.name),
+            useCustomBedType: !!r.bedType && !BED_TYPE_PRESETS.includes(r.bedType),
+            roomCount: String(unitCountByType[r.id] || 1),
           })));
         }
         if (hasRoomUnits) {
@@ -194,6 +200,7 @@ export default function WizardPage() {
         if (!rt.name.trim()) return 'กรุณากรอกชื่อประเภทห้องให้ครบ';
         if (!rt.price || isNaN(parseFloat(rt.price)) || parseFloat(rt.price) <= 0) return 'กรุณากรอกราคาต่อคืนให้ถูกต้อง';
         if (!rt.maxGuests || isNaN(parseInt(rt.maxGuests)) || parseInt(rt.maxGuests) <= 0) return 'กรุณากรอกจำนวนผู้เข้าพักให้ถูกต้อง';
+        if (!rt.roomCount || isNaN(parseInt(rt.roomCount)) || parseInt(rt.roomCount) <= 0) return 'กรุณากรอกจำนวนห้องของแต่ละประเภท';
       }
     }
     if (currentStep === 3) {
@@ -279,6 +286,27 @@ export default function WizardPage() {
         }
         setRoomTypeForms(updatedForms);
         setCreatedRoomTypes(allTypes);
+
+        // Auto-generate room unit forms for Step 4 based on each type's roomCount
+        setRoomUnitForms(prev => {
+          const countByType: Record<string, number> = {};
+          prev.forEach(u => {
+            if (u.roomTypeId) countByType[u.roomTypeId] = (countByType[u.roomTypeId] || 0) + 1;
+          });
+          const result: RoomUnitForm[] = [...prev.filter(u => u.roomTypeId && updatedForms.some(rt => rt.id === u.roomTypeId))];
+          for (const rt of updatedForms) {
+            const target = parseInt(rt.roomCount) || 1;
+            const current = countByType[rt.id!] || 0;
+            for (let i = current; i < target; i++) {
+              result.push({
+                number: `${rt.name}${i + 1}`,
+                buildingId: '', floorId: '', roomTypeId: rt.id!,
+                amenities: [], images: [],
+              });
+            }
+          }
+          return result;
+        });
       } else if (currentStep === 3) {
         // Create only room units that don't have an id yet
         const updatedForms: RoomUnitForm[] = [];
@@ -317,11 +345,10 @@ export default function WizardPage() {
   const removeFloor = (bi: number, fi: number) => setBuildingForms((prev: BuildingForm[]) => prev.map((b: BuildingForm, i: number) => i === bi ? { ...b, floors: b.floors.filter((_: FloorForm, j: number) => j !== fi) } : b));
   const updateFloorNumber = (bi: number, fi: number, number: string) => setBuildingForms((prev: BuildingForm[]) => prev.map((b: BuildingForm, i: number) => i === bi ? { ...b, floors: b.floors.map((f: FloorForm, j: number) => j === fi ? { number } : f) } : b));
 
-  const addRoomType = () => setRoomTypeForms((prev: RoomTypeForm[]) => [...prev, { name: 'Standard', price: '1500', maxGuests: '2', description: '', bedType: '', images: [], useCustomName: false }]);
+  const addRoomType = () => setRoomTypeForms((prev: RoomTypeForm[]) => [...prev, { name: '', price: '1500', maxGuests: '2', description: '', bedType: '', images: [], useCustomName: false, useCustomBedType: false, roomCount: '1' }]);
   const removeRoomType = (i: number) => setRoomTypeForms((prev: RoomTypeForm[]) => prev.filter((_: RoomTypeForm, idx: number) => idx !== i));
   const updateRoomType = (i: number, field: keyof RoomTypeForm, value: string) => setRoomTypeForms((prev: RoomTypeForm[]) => prev.map((rt: RoomTypeForm, idx: number) => idx === i ? { ...rt, [field]: value } : rt));
 
-  const addRoomUnit = () => setRoomUnitForms((prev: RoomUnitForm[]) => [...prev, { number: '', buildingId: '', floorId: '', roomTypeId: '', amenities: [], images: [] }]);
   const removeRoomUnit = (i: number) => setRoomUnitForms((prev: RoomUnitForm[]) => prev.filter((_: RoomUnitForm, idx: number) => idx !== i));
   const updateRoomUnit = (i: number, field: keyof RoomUnitForm, value: string | string[]) => setRoomUnitForms((prev: RoomUnitForm[]) => prev.map((ru: RoomUnitForm, idx: number) => idx === i ? { ...ru, [field]: value } : ru));
   const selectBuilding = (i: number, buildingId: string) => setRoomUnitForms((prev: RoomUnitForm[]) => prev.map((ru: RoomUnitForm, idx: number) => idx === i ? { ...ru, buildingId, floorId: '' } : ru));
@@ -496,19 +523,41 @@ export default function WizardPage() {
                       <Input className="mt-2" value={rt.name} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateRoomType(i, 'name', e.target.value)} placeholder="เช่น Honeymoon Suite, Garden View, ครอบครัว" />
                     )}
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-bold text-gray-900 mb-1">ราคาต่อคืน (บาท) <span className="text-red-500">*</span></label>
                       <Input value={rt.price} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateRoomType(i, 'price', e.target.value)} icon={<span className="text-sm font-medium">฿</span>} type="number" min="0" />
+                      <p className="text-xs text-gray-400 mt-1">ใช้กับห้องทุกห้องในประเภทนี้</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-gray-900 mb-1">จำนวนผู้เข้าพักสูงสุด <span className="text-red-500">*</span></label>
+                      <label className="block text-sm font-bold text-gray-900 mb-1">ผู้เข้าพักสูงสุด <span className="text-red-500">*</span></label>
                       <Input value={rt.maxGuests} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateRoomType(i, 'maxGuests', e.target.value)} icon={<Users className="w-4 h-4" />} type="number" min="1" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-900 mb-1">จำนวนห้อง <span className="text-red-500">*</span></label>
+                      <Input value={rt.roomCount} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateRoomType(i, 'roomCount', e.target.value)} icon={<BedDouble className="w-4 h-4" />} type="number" min="1" />
                     </div>
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-gray-900 mb-1">ประเภทเตียง</label>
-                    <Input value={rt.bedType} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateRoomType(i, 'bedType', e.target.value)} placeholder="เช่น King Bed, Queen Bed, Twin Bed" />
+                    <select
+                      className={selectCls}
+                      value={rt.useCustomBedType ? 'custom' : rt.bedType}
+                      onChange={(e) => {
+                        if (e.target.value === 'custom') {
+                          setRoomTypeForms(prev => prev.map((r, idx) => idx === i ? { ...r, useCustomBedType: true, bedType: '' } : r));
+                        } else {
+                          setRoomTypeForms(prev => prev.map((r, idx) => idx === i ? { ...r, useCustomBedType: false, bedType: e.target.value } : r));
+                        }
+                      }}
+                    >
+                      <option value="">เลือกประเภทเตียง</option>
+                      {BED_TYPE_PRESETS.map(p => <option key={p} value={p}>{p}</option>)}
+                      <option value="custom">กำหนดชื่อเอง...</option>
+                    </select>
+                    {rt.useCustomBedType && (
+                      <Input className="mt-2" value={rt.bedType} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateRoomType(i, 'bedType', e.target.value)} placeholder="เช่น เตียงน้ำ, เตียงไม้สัก, Day Bed" />
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-gray-900 mb-1">คำอธิบาย (ไม่บังคับ)</label>
@@ -535,70 +584,66 @@ export default function WizardPage() {
           <div className="space-y-6 pb-20">
             <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex gap-3 text-sm text-blue-800">
               <Lightbulb className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
-              <p><span className="font-bold mr-1">เคล็ดลับ:</span>เพิ่มห้องพักทีละห้อง กำหนดหมายเลขห้อง เลือกอาคาร ชั้น และประเภทห้อง</p>
+              <p><span className="font-bold mr-1">เคล็ดลับ:</span>ห้องพักถูกสร้างอัตโนมัติตามจำนวนที่กำหนดในขั้นตอนประเภทห้องพัก เหลือเพียงเลือกอาคารและชั้นของแต่ละห้อง</p>
             </div>
-            {roomUnitForms.map((ru: RoomUnitForm, i: number) => (
-              <Card key={i} padding="lg" className="flex gap-6">
-                <div className="w-12 h-12 bg-[#e0f2fe] text-[#0284c7] rounded-xl flex items-center justify-center shrink-0"><BedDouble className="w-6 h-6" /></div>
-                <div className="flex-1 space-y-4">
-                  <div className="flex justify-between items-center border-b border-gray-100 pb-4">
-                    <h3 className="text-lg font-bold text-gray-900">ห้องพัก {i + 1}</h3>
-                    {roomUnitForms.length > 1 && (
-                      <button onClick={() => removeRoomUnit(i)} className="text-red-500 text-sm font-medium flex items-center gap-1 hover:text-red-700"><X className="w-4 h-4" /> ลบ</button>
+            {roomUnitForms.map((ru: RoomUnitForm, i: number) => {
+              const typeName = createdRoomTypes.find((rt) => rt.id === ru.roomTypeId)?.name ?? '-';
+              return (
+                <Card key={i} padding="lg" className="flex gap-6">
+                  <div className="w-12 h-12 bg-[#e0f2fe] text-[#0284c7] rounded-xl flex items-center justify-center shrink-0"><BedDouble className="w-6 h-6" /></div>
+                  <div className="flex-1 space-y-4">
+                    <div className="flex justify-between items-center border-b border-gray-100 pb-4">
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-lg font-bold text-gray-900">ห้อง {ru.number || i + 1}</h3>
+                        <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-teal-50 text-primary-teal">{typeName}</span>
+                      </div>
+                      <button onClick={() => removeRoomUnit(i)} className="text-red-500 text-sm font-medium flex items-center gap-1 hover:text-red-700"><X className="w-4 h-4" /> ลบห้องนี้</button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-bold text-gray-900 mb-1">อาคาร <span className="text-red-500">*</span></label>
+                        <select className={selectCls} value={ru.buildingId} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => selectBuilding(i, e.target.value)}>
+                          <option value="">เลือกอาคาร</option>
+                          {createdBuildings.map((b: CreatedBuilding) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-gray-900 mb-1">ชั้น <span className="text-red-500">*</span></label>
+                        <select className={selectCls + (!ru.buildingId ? ' opacity-50 cursor-not-allowed' : '')} value={ru.floorId} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => updateRoomUnit(i, 'floorId', e.target.value)} disabled={!ru.buildingId}>
+                          <option value="">เลือกชั้น</option>
+                          {getFloorsForBuilding(ru.buildingId).map((f: CreatedFloor) => <option key={f.id} value={f.id}>ชั้น {f.number}</option>)}
+                        </select>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="block text-sm font-bold text-gray-900 mb-1">ชื่อ / หมายเลขห้อง <span className="text-red-500">*</span></label>
+                        <Input placeholder="เช่น 101, Standard1" value={ru.number} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateRoomUnit(i, 'number', e.target.value)} />
+                      </div>
+                    </div>
+                    {roomAmenityOptions.length > 0 && (
+                      <div>
+                        <label className="block text-sm font-bold text-gray-900 mb-2">สิ่งอำนวยความสะดวกในห้อง</label>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          {roomAmenityOptions.map((a) => (
+                            <label key={a.id} className={`flex items-center gap-2 p-2.5 border rounded-lg cursor-pointer text-sm transition-colors ${ru.amenities.includes(a.name) ? 'border-primary-teal bg-teal-50 text-primary-teal' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+                              <input type="checkbox" checked={ru.amenities.includes(a.name)} onChange={() => toggleRoomUnitAmenity(i, a.name)} className="accent-teal-500" />
+                              {a.name}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
                     )}
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-bold text-gray-900 mb-1">อาคาร <span className="text-red-500">*</span></label>
-                      <select className={selectCls} value={ru.buildingId} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => selectBuilding(i, e.target.value)}>
-                        <option value="">เลือกอาคาร</option>
-                        {createdBuildings.map((b: CreatedBuilding) => <option key={b.id} value={b.id}>{b.name}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-gray-900 mb-1">ชั้น <span className="text-red-500">*</span></label>
-                      <select className={selectCls + (!ru.buildingId ? ' opacity-50 cursor-not-allowed' : '')} value={ru.floorId} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => updateRoomUnit(i, 'floorId', e.target.value)} disabled={!ru.buildingId}>
-                        <option value="">เลือกชั้น</option>
-                        {getFloorsForBuilding(ru.buildingId).map((f: CreatedFloor) => <option key={f.id} value={f.id}>ชั้น {f.number}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-gray-900 mb-1">หมายเลขห้อง <span className="text-red-500">*</span></label>
-                      <Input placeholder="เช่น 101, 201A" value={ru.number} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateRoomUnit(i, 'number', e.target.value)} />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-gray-900 mb-1">ประเภทห้อง <span className="text-red-500">*</span></label>
-                      <select className={selectCls} value={ru.roomTypeId} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => updateRoomUnit(i, 'roomTypeId', e.target.value)}>
-                        <option value="">เลือกประเภทห้อง</option>
-                        {createdRoomTypes.map((rt: CreatedRoomType) => <option key={rt.id} value={rt.id}>{rt.name}</option>)}
-                      </select>
+                      <label className="block text-sm font-bold text-gray-900 mb-2">รูปภาพห้องพัก</label>
+                      <ImageUploader
+                        value={ru.images}
+                        onChange={(urls) => setRoomUnitForms(prev => prev.map((r, idx) => idx === i ? { ...r, images: urls } : r))}
+                        maxImages={5}
+                      />
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-900 mb-2">สิ่งอำนวยความสะดวกในห้อง</label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {ROOM_UNIT_AMENITIES.map((a: { id: string; label: string }) => (
-                        <label key={a.id} className={`flex items-center gap-2 p-2.5 border rounded-lg cursor-pointer text-sm transition-colors ${ru.amenities.includes(a.id) ? 'border-primary-teal bg-teal-50 text-primary-teal' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
-                          <input type="checkbox" checked={ru.amenities.includes(a.id)} onChange={() => toggleRoomUnitAmenity(i, a.id)} className="accent-teal-500" />
-                          {a.label}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-900 mb-2">รูปภาพห้องพัก</label>
-                    <ImageUploader
-                      value={ru.images}
-                      onChange={(urls) => setRoomUnitForms(prev => prev.map((r, idx) => idx === i ? { ...r, images: urls } : r))}
-                      maxImages={5}
-                    />
-                  </div>
-                </div>
-              </Card>
-            ))}
-            <button onClick={addRoomUnit} className="w-full border-2 border-dashed border-primary-teal text-primary-teal rounded-xl p-4 flex items-center justify-center gap-2 hover:bg-teal-50 transition-colors bg-transparent font-medium">
-              <Plus className="w-5 h-5" /> เพิ่มห้องพัก
-            </button>
+                </Card>
+              );
+            })}
           </div>
         )}
 
