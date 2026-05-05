@@ -5,6 +5,7 @@ import {
     Plus, Search, LayoutGrid, List, Eye, Car, ChevronDown,
     SlidersHorizontal, Bus, Bike, Sailboat, Truck,
 } from 'lucide-react';
+import { imageUrl } from '@/lib/imageUrl';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
 
@@ -47,6 +48,9 @@ export default function TransportPage() {
     const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
     const [showPropertyDropdown, setShowPropertyDropdown] = useState(false);
     const [filterType, setFilterType] = useState('all');
+    const [showFilters, setShowFilters] = useState(false);
+    const [filterStatus, setFilterStatus] = useState('all');
+    const [filterActive, setFilterActive] = useState('all');
 
     useEffect(() => {
         fetch(`${API}/properties`, { credentials: 'include' })
@@ -67,9 +71,13 @@ export default function TransportPage() {
             .finally(() => setLoading(false));
     }, [selectedPropertyId]);
 
+    const activeFilterCount = [filterStatus, filterActive].filter(v => v !== 'all').length;
+
     const filtered = useMemo(() => {
         let result = vehicles;
         if (filterType !== 'all') result = result.filter(v => v.type === filterType);
+        if (filterStatus !== 'all') result = result.filter(v => v.status === filterStatus);
+        if (filterActive !== 'all') result = result.filter(v => String(v.isActive) === filterActive);
         if (search) {
             const q = search.toLowerCase();
             result = result.filter(v =>
@@ -80,7 +88,7 @@ export default function TransportPage() {
             );
         }
         return result;
-    }, [vehicles, search, filterType]);
+    }, [vehicles, search, filterType, filterStatus, filterActive]);
 
     const selectedProperty = properties.find(p => p.id === selectedPropertyId);
 
@@ -151,8 +159,9 @@ export default function TransportPage() {
                     <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
                 </div>
 
-                <button className="flex items-center gap-2 px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+                <button onClick={() => setShowFilters(v => !v)} className={`flex items-center gap-2 px-3.5 py-2.5 border rounded-lg text-sm transition-colors ${showFilters || activeFilterCount > 0 ? 'border-primary-teal bg-teal-50 text-primary-teal' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
                     <SlidersHorizontal className="w-4 h-4" /> ตัวกรองเพิ่มเติม
+                    {activeFilterCount > 0 && <span className="w-5 h-5 rounded-full bg-primary-teal text-white text-xs flex items-center justify-center font-bold">{activeFilterCount}</span>}
                 </button>
 
                 <div className="flex border border-gray-200 rounded-lg overflow-hidden ml-auto">
@@ -176,6 +185,37 @@ export default function TransportPage() {
             </div>
 
             {showPropertyDropdown && <div className="fixed inset-0 z-40" onClick={() => setShowPropertyDropdown(false)} />}
+
+            {/* Advanced Filters Panel */}
+            {showFilters && (
+                <div className="bg-white border border-gray-100 rounded-xl shadow-sm p-4 mb-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1.5">สถานะ</label>
+                            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+                                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-primary-teal focus:border-primary-teal">
+                                <option value="all">ทั้งหมด</option>
+                                {Object.entries(STATUS_MAP).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1.5">สถานะใช้งาน</label>
+                            <select value={filterActive} onChange={e => setFilterActive(e.target.value)}
+                                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-primary-teal focus:border-primary-teal">
+                                <option value="all">ทั้งหมด</option>
+                                <option value="true">เปิดใช้งาน</option>
+                                <option value="false">ปิดใช้งาน</option>
+                            </select>
+                        </div>
+                    </div>
+                    {activeFilterCount > 0 && (
+                        <button onClick={() => { setFilterStatus('all'); setFilterActive('all'); }}
+                            className="mt-3 text-xs text-red-500 hover:text-red-700 font-medium">
+                            ล้างตัวกรองทั้งหมด
+                        </button>
+                    )}
+                </div>
+            )}
 
             {/* Content */}
             {loading ? (
@@ -218,7 +258,7 @@ function VehicleListView({ vehicles, onView }: { vehicles: Vehicle[]; onView: (i
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center shrink-0">
                                             {v.images?.[0]
-                                                ? <img src={v.images[0]} alt="" className="w-10 h-10 rounded-xl object-cover" />
+                                                ? <img src={imageUrl(v.images[0])} alt="" className="w-10 h-10 rounded-xl object-cover" />
                                                 : <TypeIcon className="w-5 h-5 text-teal-500" />}
                                         </div>
                                         <div>
@@ -265,7 +305,7 @@ function VehicleGridView({ vehicles, onView }: { vehicles: Vehicle[]; onView: (i
                         <div className="relative aspect-[4/3] bg-gradient-to-br from-teal-50 to-gray-100">
                             {v.images?.[0] ? (
                                 // eslint-disable-next-line @next/next/no-img-element
-                                <img src={v.images[0]} alt={v.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                <img src={imageUrl(v.images[0])} alt={v.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                             ) : (
                                 <div className="w-full h-full flex flex-col items-center justify-center gap-2">
                                     <TypeIcon className="w-12 h-12 text-teal-300" />

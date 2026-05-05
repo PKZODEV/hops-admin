@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useState } from 'react';
+import { imageUrl } from '@/lib/imageUrl';
 import { useRouter, useParams } from 'next/navigation';
 import {
     ArrowLeft, Pencil, Building2, BedDouble, Star,
@@ -129,7 +130,7 @@ export default function HotelDetailPage() {
                                 <div className="grid grid-cols-3 gap-2">
                                     {property.images.map((url, i) => (
                                         // eslint-disable-next-line @next/next/no-img-element
-                                        <img key={i} src={url} alt={`รูปภาพ ${i + 1}`} className="w-full aspect-video object-cover rounded-lg" />
+                                        <img key={i} src={imageUrl(url)} alt={`รูปภาพ ${i + 1}`} className="w-full aspect-video object-cover rounded-lg" />
                                     ))}
                                 </div>
                             </div>
@@ -257,7 +258,7 @@ export default function HotelDetailPage() {
                         <div key={rt.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
                             {rt.images.length > 0 ? (
                                 // eslint-disable-next-line @next/next/no-img-element
-                                <img src={rt.images[0]} alt={rt.name} className="w-full h-40 object-cover" />
+                                <img src={imageUrl(rt.images[0])} alt={rt.name} className="w-full h-40 object-cover" />
                             ) : (
                                 <div className="w-full h-40 bg-gray-100 flex items-center justify-center">
                                     <ImageIcon className="w-8 h-8 text-gray-300" />

@@ -20,7 +20,6 @@ interface CreatedRoomType { id: string; name: string }
 interface CreatedRoomUnit { id: string; number: string; floorId: string; roomTypeId: string }
 
 interface PropertyCategory { id: string; name: string }
-interface AmenityItem { id: string; name: string; icon?: string | null; type: 'HOTEL' | 'ROOM' }
 
 const ROOM_TYPE_PRESETS = ['Standard', 'Superior', 'Deluxe', 'Junior Suite', 'Suite', 'Family Room', 'Twin Room', 'Double Room'];
 const BED_TYPE_PRESETS = ['Single Bed', 'Twin Bed', 'Double Bed', 'Queen Bed', 'King Bed', 'Super King Bed', 'Bunk Bed', 'Sofa Bed'];
@@ -62,7 +61,6 @@ export default function WizardPage() {
   const [roomTypeForms, setRoomTypeForms] = useState<RoomTypeForm[]>([
     { name: 'Standard', price: '1500', maxGuests: '2', description: '', bedType: '', images: [], useCustomName: false, useCustomBedType: false, roomCount: '1' },
   ]);
-  const [roomAmenityOptions, setRoomAmenityOptions] = useState<AmenityItem[]>([]);
 
   const [roomUnitForms, setRoomUnitForms] = useState<RoomUnitForm[]>([
     { number: '', buildingId: '', floorId: '', roomTypeId: '', amenities: [], images: [] },
@@ -79,10 +77,6 @@ export default function WizardPage() {
     fetch(`${BASE}/property-categories`)
       .then(r => r.json())
       .then((data: PropertyCategory[]) => Array.isArray(data) && setCategories(data))
-      .catch(() => {});
-    fetch(`${BASE}/amenities?type=ROOM`, { credentials: 'include' })
-      .then(r => r.json())
-      .then((data: AmenityItem[]) => Array.isArray(data) && setRoomAmenityOptions(data))
       .catch(() => {});
   }, []);
 
@@ -352,11 +346,6 @@ export default function WizardPage() {
   const removeRoomUnit = (i: number) => setRoomUnitForms((prev: RoomUnitForm[]) => prev.filter((_: RoomUnitForm, idx: number) => idx !== i));
   const updateRoomUnit = (i: number, field: keyof RoomUnitForm, value: string | string[]) => setRoomUnitForms((prev: RoomUnitForm[]) => prev.map((ru: RoomUnitForm, idx: number) => idx === i ? { ...ru, [field]: value } : ru));
   const selectBuilding = (i: number, buildingId: string) => setRoomUnitForms((prev: RoomUnitForm[]) => prev.map((ru: RoomUnitForm, idx: number) => idx === i ? { ...ru, buildingId, floorId: '' } : ru));
-  const toggleRoomUnitAmenity = (i: number, id: string) => {
-    const ru = roomUnitForms[i];
-    const next = ru.amenities.includes(id) ? ru.amenities.filter((a: string) => a !== id) : [...ru.amenities, id];
-    updateRoomUnit(i, 'amenities', next);
-  };
   const getFloorsForBuilding = (buildingId: string) => createdBuildings.find((b: CreatedBuilding) => b.id === buildingId)?.floors ?? [];
   const getFloorMeta = (floorId: string) => {
     for (const b of createdBuildings) {
@@ -619,19 +608,10 @@ export default function WizardPage() {
                         <Input placeholder="เช่น 101, Standard1" value={ru.number} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateRoomUnit(i, 'number', e.target.value)} />
                       </div>
                     </div>
-                    {roomAmenityOptions.length > 0 && (
-                      <div>
+                    <div>
                         <label className="block text-sm font-bold text-gray-900 mb-2">สิ่งอำนวยความสะดวกในห้อง</label>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                          {roomAmenityOptions.map((a) => (
-                            <label key={a.id} className={`flex items-center gap-2 p-2.5 border rounded-lg cursor-pointer text-sm transition-colors ${ru.amenities.includes(a.name) ? 'border-primary-teal bg-teal-50 text-primary-teal' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
-                              <input type="checkbox" checked={ru.amenities.includes(a.name)} onChange={() => toggleRoomUnitAmenity(i, a.name)} className="accent-teal-500" />
-                              {a.name}
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                        <AmenitiesSelector type="ROOM" selected={ru.amenities} onChange={(newAmenities: string[]) => updateRoomUnit(i, 'amenities', newAmenities)} columns={2} />
+                    </div>
                     <div>
                       <label className="block text-sm font-bold text-gray-900 mb-2">รูปภาพห้องพัก</label>
                       <ImageUploader

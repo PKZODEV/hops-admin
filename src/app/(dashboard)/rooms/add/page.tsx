@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, Loader2, ChevronDown } from 'lucide-react';
 import { ImageUploader } from '@/components/ui/ImageUploader';
+import { AmenitiesSelector } from '@/components/onboarding/AmenitiesSelector';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
 
@@ -11,7 +12,6 @@ interface Building { id: string; name: string; floors: Floor[] }
 interface Floor { id: string; number: string }
 interface Rate { price: number }
 interface RoomType { id: string; name: string; rates: Rate[] }
-interface AmenityItem { id: string; name: string; icon?: string | null; type: 'HOTEL' | 'ROOM' }
 
 const STATUS_OPTIONS = [
     { value: 'AVAILABLE',   label: 'ว่าง (Available)' },
@@ -37,14 +37,6 @@ export default function AddRoomPage() {
     const [status, setStatus] = useState('AVAILABLE');
     const [images, setImages] = useState<string[]>([]);
     const [amenities, setAmenities] = useState<string[]>([]);
-    const [amenityOptions, setAmenityOptions] = useState<AmenityItem[]>([]);
-
-    useEffect(() => {
-        fetch(`${API}/amenities?type=ROOM`, { credentials: 'include' })
-            .then(r => r.json())
-            .then((data: AmenityItem[]) => Array.isArray(data) && setAmenityOptions(data))
-            .catch(() => {});
-    }, []);
 
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
@@ -78,9 +70,6 @@ export default function AddRoomPage() {
             .catch(() => { })
             .finally(() => setLoadingProperty(false));
     }, [selectedPropertyId]);
-
-    const toggleAmenity = (a: string) =>
-        setAmenities(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -132,20 +121,21 @@ export default function AddRoomPage() {
                 {/* Select Hotel */}
                 <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
                     <h2 className="text-sm font-bold text-gray-900 mb-4">เลือกโรงแรม</h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {properties.map(p => (
-                            <button key={p.id} type="button" onClick={() => setSelectedPropertyId(p.id)}
-                                className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm text-left transition-all ${p.id === selectedPropertyId ? 'border-primary-teal bg-teal-50 text-teal-700 font-medium' : 'border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'}`}>
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${p.id === selectedPropertyId ? 'bg-primary-teal text-white' : 'bg-gray-100 text-gray-600'}`}>
-                                    {p.name.charAt(0)}
-                                </div>
-                                <span className="truncate">{p.name}</span>
-                            </button>
-                        ))}
-                        {properties.length === 0 && (
-                            <p className="text-sm text-gray-400 col-span-2">ยังไม่มีโรงแรมในระบบ กรุณาสร้างโรงแรมก่อน</p>
-                        )}
+                    <div className="relative">
+                        <select
+                            value={selectedPropertyId}
+                            onChange={e => setSelectedPropertyId(e.target.value)}
+                            className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-teal/30 focus:border-primary-teal transition bg-white appearance-none pr-9 disabled:opacity-50"
+                            disabled={properties.length === 0}
+                        >
+                            <option value="">— เลือกโรงแรม —</option>
+                            {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                     </div>
+                    {properties.length === 0 && (
+                        <p className="text-xs text-orange-500 mt-2">ยังไม่มีโรงแรมในระบบ กรุณาสร้างโรงแรมก่อน</p>
+                    )}
                 </div>
 
                 {/* Room Info */}
@@ -233,22 +223,7 @@ export default function AddRoomPage() {
                 {/* Amenities */}
                 <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
                     <h2 className="text-sm font-bold text-gray-900 mb-4">สิ่งอำนวยความสะดวกในห้อง</h2>
-                    {amenityOptions.length === 0 ? (
-                        <p className="text-sm text-gray-400">ยังไม่มีรายการ — เพิ่มที่เมนู &quot;กำหนดข้อมูล → สิ่งอำนวยความสะดวก&quot;</p>
-                    ) : (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                            {amenityOptions.map(a => {
-                                const selected = amenities.includes(a.name);
-                                return (
-                                    <button key={a.id} type="button" onClick={() => toggleAmenity(a.name)}
-                                        className={`flex items-center gap-2 px-3.5 py-2.5 rounded-lg border text-sm transition-all ${selected ? 'border-primary-teal bg-teal-50 text-teal-700 font-medium' : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'}`}>
-                                        <span className={`w-2 h-2 rounded-full shrink-0 ${selected ? 'bg-primary-teal' : 'bg-gray-300'}`} />
-                                        {a.name}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    )}
+                    <AmenitiesSelector selected={amenities} onChange={setAmenities} type="ROOM" />
                 </div>
 
                 {/* Error */}

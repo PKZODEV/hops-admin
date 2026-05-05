@@ -1,15 +1,30 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Save, Loader2, Plus, X } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Plus, X, AlertCircle } from 'lucide-react';
 import { ImageUploader } from '@/components/ui/ImageUploader';
+import { AmenitiesSelector } from '@/components/onboarding/AmenitiesSelector';
+import {
+    RoomTypesEditor,
+    RoomTypeFormItem,
+    validateRoomTypes,
+    ROOM_TYPE_PRESETS,
+    BED_TYPE_PRESETS,
+} from '@/components/hotel/RoomTypesEditor';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
 
 interface BuildingRow { id?: string; name: string; floorCount: number; originalFloorCount: number; }
 interface RawBuilding { id: string; name: string; floors: unknown[]; }
 interface PropertyCategory { id: string; name: string }
-interface AmenityItem { id: string; name: string; icon?: string | null; type: 'HOTEL' | 'ROOM' }
+
+interface RawRate { id: string; price: number | string; isActive: boolean }
+interface RawRoomType {
+    id: string; name: string; description?: string | null; bedType?: string | null;
+    maxGuests: number; images?: string[]; isActive: boolean;
+    rates?: RawRate[];
+    _count?: { roomUnits: number };
+}
 
 export default function HotelEditPage() {
     const router = useRouter();
@@ -22,47 +37,51 @@ export default function HotelEditPage() {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [address, setAddress] = useState('');
+    const [location, setLocation] = useState('');
     const [city, setCity] = useState('');
     const [country, setCountry] = useState('');
     const [isActive, setIsActive] = useState(true);
     const [images, setImages] = useState<string[]>([]);
     const [amenities, setAmenities] = useState<string[]>([]);
     const [propertyCategoryId, setPropertyCategoryId] = useState('');
+    const [originalCategoryId, setOriginalCategoryId] = useState('');
     const [categories, setCategories] = useState<PropertyCategory[]>([]);
-    const [amenityOptions, setAmenityOptions] = useState<AmenityItem[]>([]);
 
     const [buildings, setBuildings] = useState<BuildingRow[]>([]);
     const [removedBuildingIds, setRemovedBuildingIds] = useState<string[]>([]);
+
+    const [roomTypes, setRoomTypes] = useState<RoomTypeFormItem[]>([]);
+    const [originalRoomTypes, setOriginalRoomTypes] = useState<Record<string, RoomTypeFormItem>>({});
 
     useEffect(() => {
         fetch(`${API}/property-categories`)
             .then(r => r.json())
             .then((data: PropertyCategory[]) => Array.isArray(data) && setCategories(data))
             .catch(() => {});
-        fetch(`${API}/amenities?type=HOTEL`, { credentials: 'include' })
-            .then(r => r.json())
-            .then((data: AmenityItem[]) => Array.isArray(data) && setAmenityOptions(data))
-            .catch(() => {});
     }, []);
 
     useEffect(() => {
         const load = async () => {
             try {
-                const [propRes, bRes] = await Promise.all([
+                const [propRes, bRes, rtRes] = await Promise.all([
                     fetch(`${API}/properties/${id}`, { credentials: 'include' }),
                     fetch(`${API}/properties/${id}/buildings`, { credentials: 'include' }),
+                    fetch(`${API}/properties/${id}/rooms`, { credentials: 'include' }),
                 ]);
                 if (!propRes.ok) throw new Error('โหลดข้อมูลไม่สำเร็จ');
                 const data = await propRes.json();
                 setName(data.name ?? '');
                 setDescription(data.description ?? '');
                 setAddress(data.address ?? '');
+                setLocation(data.location ?? '');
                 setCity(data.city ?? '');
                 setCountry(data.country ?? '');
                 setIsActive(data.isActive ?? true);
                 setImages(data.images ?? []);
                 setAmenities(data.amenities ?? []);
                 setPropertyCategoryId(data.propertyCategoryId ?? '');
+                setOriginalCategoryId(data.propertyCategoryId ?? '');
+
                 if (bRes.ok) {
                     const bData = await bRes.json();
                     setBuildings(Array.isArray(bData) ? bData.map((b: RawBuilding) => ({
@@ -72,6 +91,32 @@ export default function HotelEditPage() {
                         originalFloorCount: b.floors.length || 1,
                     })) : []);
                 }
+
+                if (rtRes.ok) {
+                    const rtData = await rtRes.json() as RawRoomType[];
+                    const mapped: RoomTypeFormItem[] = rtData.map(rt => {
+                        const activeRate = rt.rates?.find(r => r.isActive) ?? rt.rates?.[0];
+                        return {
+                            id: rt.id,
+                            rateId: activeRate?.id,
+                            name: rt.name,
+                            price: activeRate ? String(activeRate.price) : '',
+                            maxGuests: String(rt.maxGuests),
+                            description: rt.description ?? '',
+                            bedType: rt.bedType ?? '',
+                            images: rt.images ?? [],
+                            useCustomName: !ROOM_TYPE_PRESETS.includes(rt.name),
+                            useCustomBedType: !!rt.bedType && !BED_TYPE_PRESETS.includes(rt.bedType),
+                            roomCount: '1',
+                            isActive: rt.isActive,
+                            unitCount: rt._count?.roomUnits,
+                        };
+                    });
+                    setRoomTypes(mapped);
+                    const snapshot: Record<string, RoomTypeFormItem> = {};
+                    mapped.forEach(r => { if (r.id) snapshot[r.id] = { ...r }; });
+                    setOriginalRoomTypes(snapshot);
+                }
             } catch (e: unknown) {
                 setError(e instanceof Error ? e.message : 'โหลดข้อมูลไม่สำเร็จ');
             } finally {
@@ -80,9 +125,6 @@ export default function HotelEditPage() {
         };
         load();
     }, [id]);
-
-    const toggleAmenity = (a: string) =>
-        setAmenities(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a]);
 
     const addBuilding = () =>
         setBuildings(prev => [...prev, { name: '', floorCount: 1, originalFloorCount: 0 }]);
@@ -99,19 +141,35 @@ export default function HotelEditPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!name.trim()) { setError('กรุณากรอกชื่อโรงแรม'); return; }
+
+        const rtErr = validateRoomTypes(roomTypes, { requireRoomCount: false });
+        if (rtErr) { setError(rtErr); return; }
+
         setSaving(true);
         setError('');
         try {
-            // 1. Save property fields
+            // 1. Save property fields (omit propertyCategoryId when empty to avoid null)
+            const propBody: Record<string, unknown> = {
+                name, description, address, location, city, country,
+                amenities, images, isActive,
+            };
+            if (propertyCategoryId) {
+                propBody.propertyCategoryId = propertyCategoryId;
+            }
             const res = await fetch(`${API}/properties/${id}`, {
                 method: 'PATCH',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, description, address, city, country, amenities, images, isActive, ...(propertyCategoryId ? { propertyCategoryId } : { propertyCategoryId: null }) }),
+                body: JSON.stringify(propBody),
             });
             if (!res.ok) {
                 const data = await res.json().catch(() => ({}));
-                throw new Error(data.message ?? 'บันทึกไม่สำเร็จ');
+                throw new Error(Array.isArray(data.message) ? data.message.join(', ') : data.message ?? 'บันทึกไม่สำเร็จ');
+            }
+
+            // Warn user (non-blocking) if they attempted to clear category (we skipped it)
+            if (originalCategoryId && !propertyCategoryId) {
+                // no-op — backend doesn't accept null yet. Silently keep existing category.
             }
 
             // 2. Delete removed buildings
@@ -127,7 +185,6 @@ export default function HotelEditPage() {
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ name: b.name }),
                     });
-                    // Add new floors if count increased
                     if (b.floorCount > b.originalFloorCount) {
                         for (let f = b.originalFloorCount + 1; f <= b.floorCount; f++) {
                             await fetch(`${API}/floors`, {
@@ -157,6 +214,83 @@ export default function HotelEditPage() {
                 }
             }
 
+            // 4. Sync room types + rates
+            for (const rt of roomTypes) {
+                if (rt.id) {
+                    const orig = originalRoomTypes[rt.id];
+                    const patchBody: Record<string, unknown> = {};
+
+                    if (rt.name !== orig?.name) patchBody.name = rt.name;
+                    if (rt.description !== (orig?.description ?? '')) patchBody.description = rt.description;
+                    if (rt.bedType !== (orig?.bedType ?? '')) patchBody.bedType = rt.bedType;
+                    const maxG = parseInt(rt.maxGuests) || 1;
+                    if (maxG !== parseInt(orig?.maxGuests ?? '0')) patchBody.maxGuests = maxG;
+                    if (JSON.stringify(rt.images) !== JSON.stringify(orig?.images ?? [])) patchBody.images = rt.images;
+                    if (rt.isActive !== (orig?.isActive ?? true)) patchBody.isActive = rt.isActive;
+
+                    if (Object.keys(patchBody).length > 0) {
+                        await fetch(`${API}/rooms/${rt.id}`, {
+                            method: 'PATCH', credentials: 'include',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(patchBody),
+                        });
+                    }
+
+                    // Rate: if price changed and still active, create new rate
+                    const newPrice = parseFloat(rt.price);
+                    const oldPrice = parseFloat(orig?.price ?? '0');
+                    if (rt.isActive && !isNaN(newPrice) && newPrice > 0 && newPrice !== oldPrice) {
+                        // Deactivate old rate if any
+                        if (orig?.rateId) {
+                            await fetch(`${API}/rates/${orig.rateId}`, {
+                                method: 'PATCH', credentials: 'include',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ isActive: false }),
+                            });
+                        }
+                        await fetch(`${API}/rates`, {
+                            method: 'POST', credentials: 'include',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                name: 'ราคาพื้นฐาน',
+                                price: newPrice,
+                                roomTypeId: rt.id,
+                            }),
+                        });
+                    }
+                } else {
+                    // New room type
+                    if (!rt.name.trim()) continue;
+                    const rtRes = await fetch(`${API}/rooms`, {
+                        method: 'POST', credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: rt.name.trim(),
+                            maxGuests: parseInt(rt.maxGuests) || 2,
+                            ...(rt.description ? { description: rt.description } : {}),
+                            ...(rt.bedType ? { bedType: rt.bedType } : {}),
+                            images: rt.images,
+                            propertyId: id,
+                        }),
+                    });
+                    if (rtRes.ok) {
+                        const created = await rtRes.json() as { id: string };
+                        const price = parseFloat(rt.price);
+                        if (!isNaN(price) && price > 0) {
+                            await fetch(`${API}/rates`, {
+                                method: 'POST', credentials: 'include',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    name: 'ราคาพื้นฐาน',
+                                    price,
+                                    roomTypeId: created.id,
+                                }),
+                            });
+                        }
+                    }
+                }
+            }
+
             router.push(`/hotel-management/${id}`);
         } catch (e: unknown) {
             setError(e instanceof Error ? e.message : 'บันทึกไม่สำเร็จ');
@@ -172,19 +306,26 @@ export default function HotelEditPage() {
     );
 
     const floorWarning = buildings.some(b => b.id && b.floorCount < b.originalFloorCount);
+    const categoryClearAttempt = !!originalCategoryId && !propertyCategoryId;
 
     return (
         <div className="p-6 md:p-8 max-w-[900px] mx-auto pb-24">
-            {/* Header */}
             <div className="flex items-center gap-3 mb-8">
-                <button onClick={() => router.back()} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+                <button type="button" onClick={() => router.back()} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
                     <ArrowLeft className="w-5 h-5" />
                 </button>
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">แก้ไขโรงแรม/พูลวิลล่า/โฮมสเตย์</h1>
-                    <p className="text-sm text-gray-500 mt-0.5">อัปเดตข้อมูลที่พัก</p>
+                    <p className="text-sm text-gray-500 mt-0.5">อัปเดตข้อมูลที่พัก อาคาร และประเภทห้อง</p>
                 </div>
             </div>
+
+            {error && (
+                <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex gap-3 text-sm text-red-700">
+                    <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                    <span>{error}</span>
+                </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Basic Info */}
@@ -192,12 +333,12 @@ export default function HotelEditPage() {
                     <h2 className="text-sm font-bold text-gray-900 mb-4">ข้อมูลพื้นฐาน</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="md:col-span-2">
-                            <label className="block text-xs font-medium text-gray-700 mb-1.5">ชื่อโรงแรม/พูลวิลล่า/โฮมสเตย์ <span className="text-red-500">*</span></label>
+                            <label className="block text-xs font-medium text-gray-700 mb-1.5">ชื่อที่พัก <span className="text-red-500">*</span></label>
                             <input
                                 value={name}
                                 onChange={e => setName(e.target.value)}
                                 className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-teal/30 focus:border-primary-teal transition"
-                                placeholder="เช่น โรงแรมศรีพันวา, บ้านสวนรีสอร์ท, Lanna Pool Villa"
+                                placeholder="เช่น โรงแรมศรีพันวา"
                             />
                         </div>
                         <div>
@@ -210,6 +351,11 @@ export default function HotelEditPage() {
                                 <option value="">เลือกประเภทที่พัก</option>
                                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
+                            {categoryClearAttempt && (
+                                <p className="text-[11px] text-amber-600 mt-1">
+                                    หมายเหตุ: ระบบยังไม่รองรับการล้างประเภทที่พัก — จะคงค่าเดิมไว้
+                                </p>
+                            )}
                         </div>
                         <div>
                             <label className="block text-xs font-medium text-gray-700 mb-1.5">สถานะ</label>
@@ -218,6 +364,15 @@ export default function HotelEditPage() {
                                 <span className={`w-2.5 h-2.5 rounded-full ${isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
                                 {isActive ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
                             </button>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1.5">สถานที่</label>
+                            <input
+                                value={location}
+                                onChange={e => setLocation(e.target.value)}
+                                className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-teal/30 focus:border-primary-teal transition"
+                                placeholder="เช่น ป่าตอง ภูเก็ต"
+                            />
                         </div>
                         <div>
                             <label className="block text-xs font-medium text-gray-700 mb-1.5">เมือง</label>
@@ -253,7 +408,7 @@ export default function HotelEditPage() {
                                 onChange={e => setDescription(e.target.value)}
                                 rows={3}
                                 className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-teal/30 focus:border-primary-teal transition resize-none"
-                                placeholder="เช่น โรงแรมบูทีคใจกลางเมือง บรรยากาศล้านนา ใกล้ถนนคนเดิน เดินทางสะดวก พร้อมสระว่ายน้ำและบริการสปา..."
+                                placeholder="เช่น โรงแรมบูทีคใจกลางเมือง..."
                             />
                         </div>
                     </div>
@@ -271,7 +426,7 @@ export default function HotelEditPage() {
                     <div className="flex items-center justify-between mb-4">
                         <div>
                             <h2 className="text-sm font-bold text-gray-900">โครงสร้างอาคาร/หลัง</h2>
-                            <p className="text-xs text-gray-400 mt-0.5">อาคาร/หลัง / ชั้น ที่ใช้จัดห้องพัก — เก็บในตาราง Building & Floor เดียวกับขั้นตอนตั้งค่า</p>
+                            <p className="text-xs text-gray-400 mt-0.5">อาคาร/หลัง / ชั้น ที่ใช้จัดห้องพัก</p>
                         </div>
                         <button type="button" onClick={addBuilding}
                             className="flex items-center gap-1.5 text-xs font-medium text-primary-teal hover:text-teal-700 px-3 py-1.5 border border-primary-teal rounded-lg hover:bg-teal-50 transition-colors">
@@ -279,7 +434,7 @@ export default function HotelEditPage() {
                         </button>
                     </div>
                     {buildings.length === 0 ? (
-                        <p className="text-sm text-gray-400 text-center py-6">ยังไม่มีอาคาร/หลัง — กด &quot;เพิ่มอาคาร/หลัง&quot; เพื่อเริ่มต้น</p>
+                        <p className="text-sm text-gray-400 text-center py-6">ยังไม่มีอาคาร/หลัง</p>
                     ) : (
                         <div className="space-y-3">
                             {buildings.map((b, i) => (
@@ -289,7 +444,7 @@ export default function HotelEditPage() {
                                     )}
                                     <input
                                         className="flex-1 h-10 px-3.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:ring-primary-teal focus:border-primary-teal"
-                                        placeholder="ชื่ออาคาร/หลัง เช่น Main Building, อาคาร A"
+                                        placeholder="ชื่ออาคาร/หลัง"
                                         value={b.name}
                                         onChange={e => updateBuilding(i, 'name', e.target.value)}
                                     />
@@ -319,32 +474,22 @@ export default function HotelEditPage() {
 
                 {/* Amenities */}
                 <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-                    <h2 className="text-sm font-bold text-gray-900 mb-4">สิ่งอำนวยความสะดวก</h2>
-                    {amenityOptions.length === 0 ? (
-                        <p className="text-sm text-gray-400">ยังไม่มีรายการ — เพิ่มที่เมนู &quot;กำหนดข้อมูล → สิ่งอำนวยความสะดวก&quot;</p>
-                    ) : (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                            {amenityOptions.map(a => {
-                                const selected = amenities.includes(a.name);
-                                return (
-                                    <button key={a.id} type="button" onClick={() => toggleAmenity(a.name)}
-                                        className={`flex items-center gap-2 px-3.5 py-2.5 rounded-lg border text-sm transition-all ${selected ? 'border-primary-teal bg-teal-50 text-teal-700 font-medium' : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'}`}>
-                                        <span className={`w-2 h-2 rounded-full shrink-0 ${selected ? 'bg-primary-teal' : 'bg-gray-300'}`} />
-                                        {a.name}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    )}
+                    <h2 className="text-sm font-bold text-gray-900 mb-4">สิ่งอำนวยความสะดวกที่พัก</h2>
+                    <AmenitiesSelector selected={amenities} onChange={setAmenities} type="HOTEL" />
                 </div>
 
-                {/* Error */}
-                {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">{error}</div>
-                )}
+                {/* Room Types */}
+                <div>
+                    <div className="mb-3">
+                        <h2 className="text-base font-bold text-gray-900">ประเภทห้องพัก</h2>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                            แก้ไขราคาจะสร้างเรทใหม่อัตโนมัติ — การเก็บเข้าคลังจะซ่อนประเภทห้องจากการจองใหม่ (ห้องเดิมยังคงอยู่)
+                        </p>
+                    </div>
+                    <RoomTypesEditor value={roomTypes} onChange={setRoomTypes} showRoomCount={false} />
+                </div>
 
-                {/* Actions */}
-                <div className="flex justify-end gap-3">
+                <div className="flex justify-end gap-3 pt-4">
                     <button type="button" onClick={() => router.back()}
                         className="px-5 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
                         ยกเลิก

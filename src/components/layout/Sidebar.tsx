@@ -60,7 +60,7 @@ const NAV_ITEMS: NavItem[] = [
     { href: '/rooms', icon: BedDouble, label: 'ห้องพัก', roles: ['SUPER_ADMIN', 'ADMIN', 'HOTEL_OWNER'] },
     { href: '/transport', icon: Car, label: 'ยานพาหนะ', roles: ['SUPER_ADMIN', 'ADMIN', 'HOTEL_OWNER', 'QUEUE_OWNER'] },
     { href: '/registration-approvals', icon: UserCheck, label: 'อนุมัติการลงทะเบียน', roles: ['SUPER_ADMIN', 'ADMIN'] },
-    { href: '/reservations', icon: CalendarDays, label: 'การจอง', roles: ['SUPER_ADMIN', 'ADMIN'], comingSoon: true },
+    { href: '/booking-management', icon: CalendarDays, label: 'การจอง', roles: ['SUPER_ADMIN', 'ADMIN', 'HOTEL_OWNER'] },
     { href: '/tours', icon: Compass, label: 'ทัวร์และกิจกรรม', roles: ['SUPER_ADMIN', 'ADMIN'], comingSoon: true },
     { href: '/flights', icon: Plane, label: 'ตั๋วเครื่องบิน', roles: ['SUPER_ADMIN', 'ADMIN'], comingSoon: true },
     { href: '/car-rental', icon: CarFront, label: 'รถเช่า', roles: ['SUPER_ADMIN', 'ADMIN'], comingSoon: true },

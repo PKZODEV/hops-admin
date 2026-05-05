@@ -100,6 +100,11 @@ export default function LoginPage() {
             value={password}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
           />
+          <div className="flex justify-end -mt-2">
+            <Link href="/forgot-password" className="text-sm font-medium text-primary-teal hover:underline">
+              ลืมรหัสผ่าน?
+            </Link>
+          </div>
           <Button size="lg" className="w-full text-base py-3.5 mt-2" type="submit" disabled={loading}>
             {loading ? 'กำลังเข้าระบบ...' : 'เข้าสู่ระบบ'}
           </Button>

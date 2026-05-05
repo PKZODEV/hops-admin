@@ -1,6 +1,7 @@
 'use client';
 import React, { useRef, useState } from 'react';
 import { ImagePlus, X, Loader2 } from 'lucide-react';
+import { imageUrl } from '@/lib/imageUrl';
 
 interface ImageUploaderProps {
   value?: string[];
@@ -63,7 +64,7 @@ export function ImageUploader({ value = [], onChange, maxImages = 5, className }
         {value.map((url, idx) => (
           <div key={idx} className="relative w-24 h-24 rounded-lg overflow-hidden border border-gray-200 group shrink-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={url} alt={`รูปที่ ${idx + 1}`} className="w-full h-full object-cover" />
+            <img src={imageUrl(url)} alt={`รูปที่ ${idx + 1}`} className="w-full h-full object-cover" />
             <button
               type="button"
               onClick={() => removeImage(idx)}

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const PUBLIC_PATHS = ['/login', '/register'];
+const PUBLIC_PATHS = ['/login', '/register', '/forgot-password', '/reset-password'];
 
 export function middleware(request: NextRequest) {
   const token = request.cookies.get('hops_token')?.value;

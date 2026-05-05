@@ -5,6 +5,7 @@ import {
     ArrowLeft, Pencil, Car, Bus, Bike, Sailboat, Truck,
     MapPin, Users, ChevronDown, CheckCircle2, Phone, User2, Hash,
 } from 'lucide-react';
+import { imageUrl } from '@/lib/imageUrl';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
 
@@ -148,7 +149,7 @@ export default function VehicleDetailPage() {
                         <div className="aspect-[16/9] bg-gradient-to-br from-teal-50 to-gray-100">
                             {vehicle.images.length > 0 ? (
                                 // eslint-disable-next-line @next/next/no-img-element
-                                <img src={vehicle.images[selectedImage]} alt={vehicle.name} className="w-full h-full object-cover" />
+                                <img src={imageUrl(vehicle.images[selectedImage])} alt={vehicle.name} className="w-full h-full object-cover" />
                             ) : (
                                 <div className="w-full h-full flex flex-col items-center justify-center gap-3">
                                     <TypeIcon className="w-20 h-20 text-teal-200" />
@@ -160,7 +161,7 @@ export default function VehicleDetailPage() {
                             <div className="flex gap-2 p-3 overflow-x-auto">
                                 {vehicle.images.map((img, i) => (
                                     // eslint-disable-next-line @next/next/no-img-element
-                                    <img key={i} src={img} alt="" onClick={() => setSelectedImage(i)}
+                                    <img key={i} src={imageUrl(img)} alt="" onClick={() => setSelectedImage(i)}
                                         className={`w-20 h-14 object-cover rounded-lg cursor-pointer shrink-0 transition-all ${i === selectedImage ? 'ring-2 ring-primary-teal' : 'opacity-70 hover:opacity-100'}`} />
                                 ))}
                             </div>

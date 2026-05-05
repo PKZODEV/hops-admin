@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Pencil, Calendar, ChevronDown, CheckCircle2, BedDouble, Users, Maximize2 } from 'lucide-react';
+import { imageUrl } from '@/lib/imageUrl';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
 
@@ -146,7 +147,7 @@ export default function RoomDetailPage() {
                         <div className="aspect-[16/9] bg-gray-100">
                             {allImages.length > 0 ? (
                                 // eslint-disable-next-line @next/next/no-img-element
-                                <img src={allImages[selectedImage]} alt="Room" className="w-full h-full object-cover" />
+                                <img src={imageUrl(allImages[selectedImage])} alt="Room" className="w-full h-full object-cover" />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center">
                                     <BedDouble className="w-16 h-16 text-gray-200" />
@@ -157,7 +158,7 @@ export default function RoomDetailPage() {
                             <div className="flex gap-2 p-3 overflow-x-auto">
                                 {allImages.map((img, i) => (
                                     // eslint-disable-next-line @next/next/no-img-element
-                                    <img key={i} src={img} alt="" onClick={() => setSelectedImage(i)}
+                                    <img key={i} src={imageUrl(img)} alt="" onClick={() => setSelectedImage(i)}
                                         className={`w-20 h-14 object-cover rounded-lg cursor-pointer shrink-0 transition-all ${i === selectedImage ? 'ring-2 ring-primary-teal' : 'opacity-70 hover:opacity-100'}`} />
                                 ))}
                             </div>

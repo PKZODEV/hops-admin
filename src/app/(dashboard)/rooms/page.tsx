@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Search, LayoutGrid, List, Eye, BedDouble, SlidersHorizontal, ChevronDown } from 'lucide-react';
+import { imageUrl } from '@/lib/imageUrl';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
 
@@ -32,6 +33,10 @@ export default function RoomsPage() {
     const [search, setSearch] = useState('');
     const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
     const [showPropertyDropdown, setShowPropertyDropdown] = useState(false);
+    const [showFilters, setShowFilters] = useState(false);
+    const [filterStatus, setFilterStatus] = useState('all');
+    const [filterRoomType, setFilterRoomType] = useState('all');
+    const [filterBuilding, setFilterBuilding] = useState('all');
 
     // Load all properties
     useEffect(() => {
@@ -56,15 +61,41 @@ export default function RoomsPage() {
             .finally(() => setLoading(false));
     }, [selectedPropertyId]);
 
+    // Real-time polling: refresh room status ทุก 5 วินาที
+    useEffect(() => {
+        if (!selectedPropertyId) return;
+        const id = setInterval(() => {
+            if (document.visibilityState !== 'visible') return;
+            fetch(`${API}/properties/${selectedPropertyId}/room-units`, { credentials: 'include' })
+                .then(r => r.json())
+                .then((data: RoomUnit[]) => {
+                    if (Array.isArray(data)) setRooms(data);
+                })
+                .catch(() => { });
+        }, 5000);
+        return () => clearInterval(id);
+    }, [selectedPropertyId]);
+
+    const uniqueRoomTypes = useMemo(() => [...new Set(rooms.map(r => r.roomType?.name).filter(Boolean))] as string[], [rooms]);
+    const uniqueBuildings = useMemo(() => [...new Set(rooms.map(r => r.floor?.building?.name).filter(Boolean))] as string[], [rooms]);
+
+    const activeFilterCount = [filterStatus, filterRoomType, filterBuilding].filter(v => v !== 'all').length;
+
     const filtered = useMemo(() => {
-        const q = search.toLowerCase();
-        if (!q) return rooms;
-        return rooms.filter(r =>
-            r.number.toLowerCase().includes(q) ||
-            r.roomType?.name.toLowerCase().includes(q) ||
-            r.floor?.building?.name.toLowerCase().includes(q)
-        );
-    }, [rooms, search]);
+        let result = rooms;
+        if (search) {
+            const q = search.toLowerCase();
+            result = result.filter(r =>
+                r.number.toLowerCase().includes(q) ||
+                r.roomType?.name.toLowerCase().includes(q) ||
+                r.floor?.building?.name.toLowerCase().includes(q)
+            );
+        }
+        if (filterStatus !== 'all') result = result.filter(r => r.status === filterStatus);
+        if (filterRoomType !== 'all') result = result.filter(r => r.roomType?.name === filterRoomType);
+        if (filterBuilding !== 'all') result = result.filter(r => r.floor?.building?.name === filterBuilding);
+        return result;
+    }, [rooms, search, filterStatus, filterRoomType, filterBuilding]);
 
     const selectedProperty = properties.find(p => p.id === selectedPropertyId);
 
@@ -129,8 +160,9 @@ export default function RoomsPage() {
                 </div>
 
                 {/* More Filters */}
-                <button className="flex items-center gap-2 px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+                <button onClick={() => setShowFilters(v => !v)} className={`flex items-center gap-2 px-3.5 py-2.5 border rounded-lg text-sm transition-colors ${showFilters || activeFilterCount > 0 ? 'border-primary-teal bg-teal-50 text-primary-teal' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
                     <SlidersHorizontal className="w-4 h-4" /> ตัวกรองเพิ่มเติม
+                    {activeFilterCount > 0 && <span className="w-5 h-5 rounded-full bg-primary-teal text-white text-xs flex items-center justify-center font-bold">{activeFilterCount}</span>}
                 </button>
 
                 {/* View toggle */}
@@ -146,6 +178,44 @@ export default function RoomsPage() {
 
             {/* Click outside to close dropdown */}
             {showPropertyDropdown && <div className="fixed inset-0 z-40" onClick={() => setShowPropertyDropdown(false)} />}
+
+            {/* Advanced Filters Panel */}
+            {showFilters && (
+                <div className="bg-white border border-gray-100 rounded-xl shadow-sm p-4 mb-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1.5">สถานะห้อง</label>
+                            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+                                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-primary-teal focus:border-primary-teal">
+                                <option value="all">ทั้งหมด</option>
+                                {Object.entries(STATUS_MAP).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1.5">ประเภทห้อง</label>
+                            <select value={filterRoomType} onChange={e => setFilterRoomType(e.target.value)}
+                                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-primary-teal focus:border-primary-teal">
+                                <option value="all">ทั้งหมด</option>
+                                {uniqueRoomTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1.5">อาคาร</label>
+                            <select value={filterBuilding} onChange={e => setFilterBuilding(e.target.value)}
+                                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-primary-teal focus:border-primary-teal">
+                                <option value="all">ทั้งหมด</option>
+                                {uniqueBuildings.map(b => <option key={b} value={b}>{b}</option>)}
+                            </select>
+                        </div>
+                    </div>
+                    {activeFilterCount > 0 && (
+                        <button onClick={() => { setFilterStatus('all'); setFilterRoomType('all'); setFilterBuilding('all'); }}
+                            className="mt-3 text-xs text-red-500 hover:text-red-700 font-medium">
+                            ล้างตัวกรองทั้งหมด
+                        </button>
+                    )}
+                </div>
+            )}
 
             {/* Content */}
             {loading ? (
@@ -217,7 +287,7 @@ function GridView({ rooms, onView }: { rooms: RoomUnit[]; onView: (id: string) =
                         <div className="relative aspect-[4/3] bg-gray-100">
                             {img ? (
                                 // eslint-disable-next-line @next/next/no-img-element
-                                <img src={img} alt={`Room ${r.number}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                <img src={imageUrl(img)} alt={`Room ${r.number}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center">
                                     <BedDouble className="w-10 h-10 text-gray-200" />
