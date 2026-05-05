@@ -96,7 +96,8 @@ export const Sidebar = ({ isCollapsed, toggleSidebar, isMobileOpen = false, onMo
                 { method: 'POST', credentials: 'include' }
             );
         } catch {
-            // proceed regardless
+            /* Network failure on logout still clears the local session so
+               the user is never trapped in a half-signed-in state. */
         }
         clearStoredUser();
         router.push('/login');
@@ -118,6 +119,8 @@ export const Sidebar = ({ isCollapsed, toggleSidebar, isMobileOpen = false, onMo
             });
             return next;
         });
+        /* `visibleItems` itself is recreated on every render, but only its
+           length affects the expand-on-route-change behaviour we want. */
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [pathname, visibleItems.length]);
 

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Card } from '@/components/ui/Card';
 import { mockDashboardMetrics } from '@/mockData';
 import { Calendar, Building, DollarSign, Users, TrendingUp } from 'lucide-react';

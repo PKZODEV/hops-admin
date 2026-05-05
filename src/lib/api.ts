@@ -1,7 +1,22 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
+/**
+ * Thin JSON HTTP client for the HOPS backend API.
+ *
+ * Authentication is delivered via the `hops_token` HTTP-only cookie. We must
+ * therefore always send `credentials: 'include'` so the browser attaches the
+ * cookie when the API is hosted on a different sub-domain.
+ */
+
+const BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
+
+type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE';
+
+interface ApiErrorBody {
+  message?: string | string[];
+}
 
 async function request<T>(
-  method: string,
+  method: HttpMethod,
   path: string,
   body?: unknown,
 ): Promise<T> {
@@ -16,12 +31,15 @@ async function request<T>(
     const text = await res.text().catch(() => 'Unknown error');
     let message = text;
     try {
-      const json = JSON.parse(text);
-      message = Array.isArray(json.message)
-        ? json.message.join(', ')
-        : json.message ?? text;
+      const parsed = JSON.parse(text) as ApiErrorBody;
+      const raw = parsed.message;
+      if (Array.isArray(raw)) {
+        message = raw.join(', ');
+      } else if (typeof raw === 'string') {
+        message = raw;
+      }
     } catch {
-      // use raw text
+      /* Non-JSON error payload: surface the raw response text unchanged. */
     }
     throw new Error(message);
   }

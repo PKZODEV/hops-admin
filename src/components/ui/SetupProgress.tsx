@@ -1,7 +1,5 @@
-import React from 'react';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { CheckCircle2, Circle, ArrowRight } from 'lucide-react';
+import { CheckCircle2, Circle } from 'lucide-react';
 import { mockSetupStatus } from '@/mockData';
 
 export const SetupProgress = () => {

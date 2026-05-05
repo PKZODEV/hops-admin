@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import * as Icons from 'lucide-react';
 import { Sparkles, LucideIcon } from 'lucide-react';
 

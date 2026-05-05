@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, MapPin, Star, Eye, Pencil, Plus, SlidersHorizontal } from 'lucide-react';
 import { getStoredUser } from '@/lib/auth';
@@ -107,7 +107,8 @@ export default function HotelManagementPage() {
                 );
                 setHotels(rows);
             } catch {
-                // ignore
+                /* The list is best-effort: surface no error and just leave
+                   the table empty if the upstream call fails. */
             } finally {
                 setLoading(false);
             }

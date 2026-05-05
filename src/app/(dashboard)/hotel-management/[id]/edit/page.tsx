@@ -148,7 +148,9 @@ export default function HotelEditPage() {
         setSaving(true);
         setError('');
         try {
-            // 1. Save property fields (omit propertyCategoryId when empty to avoid null)
+            /* Step 1: persist property header. `propertyCategoryId` is
+               omitted when empty because the backend currently rejects
+               null on this field. */
             const propBody: Record<string, unknown> = {
                 name, description, address, location, city, country,
                 amenities, images, isActive,
@@ -167,17 +169,17 @@ export default function HotelEditPage() {
                 throw new Error(Array.isArray(data.message) ? data.message.join(', ') : data.message ?? 'บันทึกไม่สำเร็จ');
             }
 
-            // Warn user (non-blocking) if they attempted to clear category (we skipped it)
-            if (originalCategoryId && !propertyCategoryId) {
-                // no-op — backend doesn't accept null yet. Silently keep existing category.
-            }
+            /* TODO(category-clearing): the backend currently rejects a
+               null propertyCategoryId, so we silently leave the existing
+               value when the user blanks it on the form. Surface a
+               warning here once PATCH supports clearing the category. */
 
-            // 2. Delete removed buildings
+            /* Step 2: tombstone any building the user removed from the form. */
             for (const bid of removedBuildingIds) {
                 await fetch(`${API}/buildings/${bid}`, { method: 'DELETE', credentials: 'include' });
             }
 
-            // 3. Update or create buildings
+            /* Step 3: update existing buildings or create newly added ones. */
             for (const b of buildings) {
                 if (b.id) {
                     await fetch(`${API}/buildings/${b.id}`, {
@@ -214,7 +216,7 @@ export default function HotelEditPage() {
                 }
             }
 
-            // 4. Sync room types + rates
+            /* Step 4: sync each room type and its base rate. */
             for (const rt of roomTypes) {
                 if (rt.id) {
                     const orig = originalRoomTypes[rt.id];
@@ -236,11 +238,13 @@ export default function HotelEditPage() {
                         });
                     }
 
-                    // Rate: if price changed and still active, create new rate
+                    /* Rates are immutable: when the price changes we
+                       deactivate the previous active rate and create a
+                       new one so historical bookings keep referencing
+                       the rate they were priced against. */
                     const newPrice = parseFloat(rt.price);
                     const oldPrice = parseFloat(orig?.price ?? '0');
                     if (rt.isActive && !isNaN(newPrice) && newPrice > 0 && newPrice !== oldPrice) {
-                        // Deactivate old rate if any
                         if (orig?.rateId) {
                             await fetch(`${API}/rates/${orig.rateId}`, {
                                 method: 'PATCH', credentials: 'include',
@@ -259,7 +263,7 @@ export default function HotelEditPage() {
                         });
                     }
                 } else {
-                    // New room type
+                    /* Newly added room type — POST and seed a base rate. */
                     if (!rt.name.trim()) continue;
                     const rtRes = await fetch(`${API}/rooms`, {
                         method: 'POST', credentials: 'include',

@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { ImageUploader } from '@/components/ui/ImageUploader';
@@ -57,7 +56,8 @@ export function RoomTypesEditor({ value, onChange, showRoomCount = true }: Props
   const remove = (i: number) => {
     const item = value[i];
     if (item.id) {
-      // existing — soft delete (mark inactive). Keep in list so save pipeline can PATCH.
+      /* Persisted rows are soft-deleted by flagging them inactive; the
+         entry stays in the list so the save pipeline can PATCH it. */
       update(i, { isActive: false });
     } else {
       onChange(value.filter((_, idx) => idx !== i));
@@ -242,7 +242,7 @@ export function RoomTypesEditor({ value, onChange, showRoomCount = true }: Props
 
 export function validateRoomTypes(rts: RoomTypeFormItem[], { requireRoomCount = true } = {}): string | null {
   for (const rt of rts) {
-    if (rt.id && !rt.isActive) continue; // soft-deleted — skip validation
+    if (rt.id && !rt.isActive) continue;
     if (!rt.name.trim()) return 'กรุณากรอกชื่อประเภทห้องให้ครบ';
     if (!rt.price || isNaN(parseFloat(rt.price)) || parseFloat(rt.price) <= 0) return 'กรุณากรอกราคาต่อคืนให้ถูกต้อง';
     if (!rt.maxGuests || isNaN(parseInt(rt.maxGuests)) || parseInt(rt.maxGuests) <= 0) return 'กรุณากรอกจำนวนผู้เข้าพักให้ถูกต้อง';

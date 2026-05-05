@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { HelpCircle, Menu } from 'lucide-react';
 
 interface HeaderProps {
@@ -22,7 +22,7 @@ export const Header = ({ onMenuToggle }: HeaderProps) => {
                 );
             }
         } catch {
-            // keep defaults
+            /* Falls back to the default name + initials if localStorage is unreadable. */
         }
     }, []);
 

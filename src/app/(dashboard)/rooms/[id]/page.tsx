@@ -27,7 +27,7 @@ const STATUS_MAP: Record<string, { label: string; cls: string; dot: string }> = 
 
 const ALL_STATUSES = ['AVAILABLE', 'RESERVED', 'OCCUPIED', 'CLEANING', 'MAINTENANCE', 'DISABLED'];
 
-// Generate next 7 days for the availability calendar
+/** Returns the next seven calendar days (today inclusive) for the availability strip. */
 function getNext7Days() {
     const days: { date: string; dateObj: Date }[] = [];
     for (let i = 0; i < 7; i++) {
@@ -240,7 +240,9 @@ export default function RoomDetailPage() {
                         <h3 className="font-bold text-gray-900 mb-4">ปฏิทินความสะดวกในการจอง</h3>
                         <div className="space-y-2">
                             {days.map(({ date }) => {
-                                // For now, reflect current room status on today; others show available
+                                /* Until the booking calendar is wired in, mirror the
+                                   live status only on today's row and treat the rest
+                                   of the week as available. */
                                 const isToday = date === days[0].date;
                                 const dayStatus = isToday && room.status === 'OCCUPIED' ? 'OCCUPIED' : 'AVAILABLE';
                                 const info = STATUS_MAP[dayStatus];

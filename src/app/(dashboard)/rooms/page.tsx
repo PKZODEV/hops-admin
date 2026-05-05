@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Search, LayoutGrid, List, Eye, BedDouble, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import { imageUrl } from '@/lib/imageUrl';
@@ -38,7 +38,7 @@ export default function RoomsPage() {
     const [filterRoomType, setFilterRoomType] = useState('all');
     const [filterBuilding, setFilterBuilding] = useState('all');
 
-    // Load all properties
+    /* Load the property list once and pre-select the first one. */
     useEffect(() => {
         fetch(`${API}/properties`, { credentials: 'include' })
             .then(r => r.json())
@@ -50,7 +50,7 @@ export default function RoomsPage() {
             .catch(() => { });
     }, []);
 
-    // Load rooms when property changes
+    /* Reload the room list whenever the active property changes. */
     useEffect(() => {
         if (!selectedPropertyId) return;
         setLoading(true);
@@ -61,7 +61,9 @@ export default function RoomsPage() {
             .finally(() => setLoading(false));
     }, [selectedPropertyId]);
 
-    // Real-time polling: refresh room status ทุก 5 วินาที
+    /* Lightweight room-status polling at 5s while the tab is foregrounded.
+       The fetch is silent — no spinner or layout shift — so live status
+       changes are reflected without disrupting the operator. */
     useEffect(() => {
         if (!selectedPropertyId) return;
         const id = setInterval(() => {

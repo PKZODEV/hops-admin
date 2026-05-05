@@ -41,7 +41,7 @@ export default function AddRoomPage() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
 
-    // Load properties
+    /* Load the property list once and pre-select the first one. */
     useEffect(() => {
         fetch(`${API}/properties`, { credentials: 'include' })
             .then(r => r.json())
@@ -53,7 +53,7 @@ export default function AddRoomPage() {
             .catch(() => { });
     }, []);
 
-    // Load buildings + room types when property changes
+    /* Reload buildings + room types whenever the active property changes. */
     useEffect(() => {
         if (!selectedPropertyId) return;
         setLoadingProperty(true);
@@ -99,7 +99,8 @@ export default function AddRoomPage() {
         }
     };
 
-    // Compute all floors from all buildings with label
+    /* Flatten every building's floors into a single list, labelled with
+       the parent building name so the dropdown is unambiguous. */
     const allFloors = buildings.flatMap(b =>
         (b.floors ?? []).map(f => ({ id: f.id, label: `${b.name} — ชั้น ${f.number}`, buildingName: b.name }))
     );

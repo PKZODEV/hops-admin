@@ -1,6 +1,10 @@
-import React from 'react';
+/**
+ * Wordmark and badge for the HOPS brand.
+ *
+ * `HopsLogo` renders the square badge alone; `HopsLogoText` pairs the
+ * badge with the wordmark for use in navigation and auth screens.
+ */
 
-// Using standard Next.js Head or just a simple icon component since this is a UI prototype
 export const HopsLogo = ({ className = "" }: { className?: string }) => (
     <div className={`flex items-center justify-center bg-primary-teal text-white font-bold rounded-lg w-12 h-12 ${className}`}>
         HOPS

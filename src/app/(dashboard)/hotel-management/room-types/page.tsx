@@ -160,7 +160,7 @@ export default function RoomTypesPage() {
                     saved.push(created);
                 }
             }
-            // refresh rates list for this room
+            /* Replace the special-rate slice for this room with the just-saved rows. */
             setRoomTypes(prev => prev.map(r => r.id === room.id
                 ? { ...r, rates: [...r.rates.filter(rt => !isSpecialRate(rt)), ...saved] }
                 : r,

@@ -48,7 +48,8 @@ export default function ChangePasswordPage() {
         const msg = Array.isArray(data.message) ? data.message.join(', ') : data.message ?? 'เปลี่ยนรหัสผ่านไม่สำเร็จ';
         throw new Error(msg);
       }
-      // Clear mustChangePassword flag in localStorage
+      /* The backend has cleared the must-change flag; mirror that on the
+         cached profile so the user is not prompted again next page load. */
       const u = getStoredUser();
       if (u) setStoredUser({ ...u, mustChangePassword: false });
       setDone(true);

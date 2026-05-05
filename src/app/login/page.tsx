@@ -37,19 +37,18 @@ export default function LoginPage() {
 
       setStoredUser(data.user);
 
-      // Force password change on first login
       if (data.user.mustChangePassword) {
         router.push('/setup/change-password');
         return;
       }
 
-      // SUPER_ADMIN goes straight to dashboard
       if (data.user.role === 'SUPER_ADMIN' || data.user.role === 'ADMIN') {
         router.push('/');
         return;
       }
 
-      // Other roles — pick first property if any, else dashboard
+      /* Non-admin roles see a single property at a time. Pre-select the
+         first one (if any) so subsequent pages do not have to ask again. */
       try {
         const propRes = await fetch(`${API}/properties`, { credentials: 'include' });
         const props = await propRes.json();

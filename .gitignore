@@ -30,8 +30,15 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files
+# Committed templates (safe to track, hold no secrets):
+#   .env.example         documents required variables
+#   .env.development     local-dev defaults
+#   .env.production      production-build defaults (public values only)
+# Per-developer overrides (.local) and the unsuffixed .env must NOT be committed.
+.env
+.env.local
+.env.*.local
 
 # vercel
 .vercel

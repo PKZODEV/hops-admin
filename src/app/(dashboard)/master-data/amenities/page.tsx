@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import * as Icons from 'lucide-react';
 import { Plus, Search, Pencil, Trash2, Sparkles, X, LucideIcon } from 'lucide-react';
 

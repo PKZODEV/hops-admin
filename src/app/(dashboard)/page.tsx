@@ -1,7 +1,7 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, ArrowRight, TrendingUp, Users, CalendarDays, Building2, Settings, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, ArrowRight, Users, CalendarDays, Building2, Settings, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -94,7 +94,6 @@ export default function DashboardPage() {
     const totalRooms = stats?.rooms.total ?? 0;
     const setupDone = completedSteps >= 4;
 
-    // Build chart data based on period
     const revenueData = MONTHS.map((m, i) => ({ name: m, value: MOCK_REVENUE_MONTHLY[i] }));
     const occupancyData = MONTHS.map((m, i) => ({ name: m, value: MOCK_OCCUPANCY_MONTHLY[i] }));
 

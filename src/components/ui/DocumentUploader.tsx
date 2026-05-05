@@ -1,6 +1,6 @@
 'use client';
-import React, { useRef, useState } from 'react';
-import { Upload, FileText, X, Loader2, CheckCircle2 } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Upload, X, Loader2, CheckCircle2 } from 'lucide-react';
 
 interface DocumentUploaderProps {
   label: string;

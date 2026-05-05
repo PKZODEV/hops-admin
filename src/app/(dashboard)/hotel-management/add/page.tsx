@@ -51,7 +51,8 @@ export default function AddHotelPage() {
         setLoading(true);
         setError(null);
         try {
-            // 1. Create property
+            /* Step 1: persist the property header. The id returned here
+               anchors every nested resource created below. */
             const propRes = await fetch(`${API}/properties`, {
                 method: 'POST',
                 credentials: 'include',
@@ -70,7 +71,7 @@ export default function AddHotelPage() {
             }
             const prop = await propRes.json() as { id: string };
 
-            // 2. Create buildings + floors
+            /* Step 2: create each building, then create the floors for it. */
             for (const b of buildings) {
                 if (!b.name.trim()) continue;
                 const bRes = await fetch(`${API}/buildings`, {
@@ -90,7 +91,7 @@ export default function AddHotelPage() {
                 }
             }
 
-            // 3. Create room types + base rate
+            /* Step 3: create each room type and seed it with a base rate. */
             for (const rt of roomTypes) {
                 if (!rt.name.trim()) continue;
                 const rtRes = await fetch(`${API}/rooms`, {

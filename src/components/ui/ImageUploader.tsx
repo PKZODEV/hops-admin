@@ -1,5 +1,5 @@
 'use client';
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { ImagePlus, X, Loader2 } from 'lucide-react';
 import { imageUrl } from '@/lib/imageUrl';
 
@@ -31,7 +31,8 @@ export function ImageUploader({ value = [], onChange, maxImages = 5, className }
       throw new Error(err.message ?? 'Upload failed');
     }
     const data = await res.json() as { url: string };
-    // Build absolute URL from the API base (strip /api/v1 suffix)
+    /* The upload endpoint returns a path rooted at the backend origin, not
+       at the `/api/v1` prefix, so we strip that suffix before joining. */
     const backendBase = API_BASE.replace(/\/api\/v1\/?$/, '');
     return `${backendBase}${data.url}`;
   };

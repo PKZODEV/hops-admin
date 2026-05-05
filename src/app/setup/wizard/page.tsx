@@ -71,7 +71,10 @@ export default function WizardPage() {
   const [createdRoomTypes, setCreatedRoomTypes] = useState<CreatedRoomType[]>([]);
   const [createdRoomUnits, setCreatedRoomUnits] = useState<CreatedRoomUnit[]>([]);
 
-  // On mount: load existing data and resume at first incomplete step
+  /**
+   * Loads the property-category list once on mount. Errors are silently
+   * swallowed because the wizard can still complete without categories.
+   */
   React.useEffect(() => {
     const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
     fetch(`${BASE}/property-categories`)
@@ -80,7 +83,10 @@ export default function WizardPage() {
       .catch(() => {});
   }, []);
 
-  // On mount: load existing data and resume at first incomplete step
+  /**
+   * Hydrates any wizard state that has already been persisted on the
+   * backend and resumes the user at the first incomplete step.
+   */
   React.useEffect(() => {
     const init = async () => {
       try {
@@ -112,7 +118,6 @@ export default function WizardPage() {
             floors: Array.isArray(b.floors) ? b.floors.map((f) => ({ id: f.id, number: f.number })) : [],
           }));
           setCreatedBuildings(buildingList);
-          // Hydrate the form so the user sees what's already saved (with ids tracked)
           setBuildingForms(buildingList.map((b: { id: string; name: string; floors: { id: string; number: string }[] }) => ({
             id: b.id,
             name: b.name,
@@ -165,13 +170,12 @@ export default function WizardPage() {
           })));
         }
 
-        // Resume at first incomplete step
         if (!hasBuildings) setCurrentStep(1);
         else if (!hasRoomTypes) setCurrentStep(2);
         else if (!hasRoomUnits) setCurrentStep(3);
         else setCurrentStep(4);
       } catch {
-        // Start from step 0 on any error
+        /* Hydration is best-effort; on failure the wizard simply starts at step 0. */
       } finally {
         setInitializing(false);
       }
@@ -229,7 +233,7 @@ export default function WizardPage() {
           if (typeof window !== 'undefined') localStorage.setItem('hops_property_id', property.id);
         }
       } else if (currentStep === 1) {
-        // Create only buildings/floors that don't have an id yet
+        /* Idempotent create: only persist buildings/floors that lack an id. */
         const updatedForms: BuildingForm[] = [];
         const allBuildings: CreatedBuilding[] = [];
         for (const bForm of buildingForms) {
@@ -258,7 +262,8 @@ export default function WizardPage() {
         setBuildingForms(updatedForms);
         setCreatedBuildings(allBuildings);
       } else if (currentStep === 2) {
-        // Create only room types that don't have an id yet (avoid duplicates on back/forward)
+        /* Idempotent create: only persist room types that lack an id, so
+           navigating back-and-forward never produces duplicates. */
         const updatedForms: RoomTypeForm[] = [];
         const allTypes: CreatedRoomType[] = [];
         for (const rtForm of roomTypeForms) {
@@ -281,7 +286,8 @@ export default function WizardPage() {
         setRoomTypeForms(updatedForms);
         setCreatedRoomTypes(allTypes);
 
-        // Auto-generate room unit forms for Step 4 based on each type's roomCount
+        /* Pre-fill the Step 4 unit forms so that each type already has the
+           number of unit slots its `roomCount` field requested. */
         setRoomUnitForms(prev => {
           const countByType: Record<string, number> = {};
           prev.forEach(u => {
@@ -302,7 +308,7 @@ export default function WizardPage() {
           return result;
         });
       } else if (currentStep === 3) {
-        // Create only room units that don't have an id yet
+        /* Idempotent create: only persist room units that lack an id. */
         const updatedForms: RoomUnitForm[] = [];
         const allUnits: CreatedRoomUnit[] = [];
         for (const ruForm of roomUnitForms) {

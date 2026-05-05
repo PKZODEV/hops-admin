@@ -22,7 +22,8 @@ interface Props {
   required?: boolean;
 }
 
-// Cache to avoid re-fetching on remounts
+/* Module-level cache: the JSON datasets are static and ~2 MB combined,
+   so we only fetch them once per browser session even across remounts. */
 let cache: {
   provinces?: Province[];
   districts?: District[];

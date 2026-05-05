@@ -1,4 +1,3 @@
-import React from 'react';
 import { mockSetupStatus } from '@/mockData';
 
 interface StepperProps {

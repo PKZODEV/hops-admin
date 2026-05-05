@@ -1,4 +1,3 @@
-import React from 'react';
 import { Card } from '@/components/ui/Card';
 import { mockRoomStatusCounts } from '@/mockData';
 import { ArrowRight } from 'lucide-react';

@@ -193,7 +193,8 @@ export default function BookingManagementPage() {
                 .then((d) => {
                     const arr = Array.isArray(d) ? d : [];
                     setItems(arr);
-                    // sync selected booking with latest data
+                    /* Refresh the selected booking from the new payload so the
+                       detail panel never shows stale fields after a poll. */
                     setSelected((prev) => {
                         if (!prev) return prev;
                         const updated = arr.find((b: Booking) => b.id === prev.id);
@@ -214,7 +215,8 @@ export default function BookingManagementPage() {
         load();
     }, [load]);
 
-    // Real-time polling: refresh ทุก 5 วินาที (silent — ไม่กระพริบ loading)
+    /* Lightweight polling at 5s, silent so the loading skeleton never
+       reappears. Only fires while the tab is foregrounded. */
     useEffect(() => {
         const id = setInterval(() => {
             if (document.visibilityState === 'visible') load(true);

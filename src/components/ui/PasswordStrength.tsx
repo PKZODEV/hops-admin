@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import { Check, X } from 'lucide-react';
 
 export interface PasswordRule {
